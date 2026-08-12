@@ -44,22 +44,23 @@ export async function processZApiWebhook(
 ): Promise<ProcessZApiWebhookResult> {
   try {
     // Dispatch to appropriate handler based on event type
-    if (isReceiveEvent(event)) {
-      return await handleReceiveEvent(event, tenantId);
-    } else if (isStatusEvent(event)) {
-      return await handleStatusEvent(event, tenantId);
-    } else if (isDeliveryEvent(event)) {
-      return await handleDeliveryEvent(event, tenantId);
+    switch (event.type) {
+      case 'receive':
+        return await handleReceiveEvent(event, tenantId);
+      case 'status':
+        return await handleStatusEvent(event, tenantId);
+      case 'delivery':
+        return await handleDeliveryEvent(event, tenantId);
+      default:
+        // Silently ignore other event types (disconnected, etc.)
+        return {
+          success: true,
+          data: {
+            eventType: event.type,
+            action: 'ignored',
+          },
+        };
     }
-
-    // Silently ignore other event types (disconnected, etc.)
-    return {
-      success: true,
-      data: {
-        eventType: event.type,
-        action: 'ignored',
-      },
-    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Z-API Processor Error]', {

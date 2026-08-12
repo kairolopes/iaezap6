@@ -46,12 +46,12 @@ interface LogoutResponse {
 export async function POST(request: NextRequest): Promise<NextResponse<LogoutResponse>> {
   try {
     // Extract token from request body or Authorization header
-    let token: string | null = null;
+    let token: string | undefined | null = undefined;
 
     // Try to get token from request body first
     try {
       const body = await request.json() as LogoutRequest;
-      token = body.token;
+      token = body.token || null;
     } catch {
       // Body might not be JSON, continue to check headers
     }
