@@ -302,6 +302,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<WebhookRe
     // Process webhook asynchronously (fire-and-forget)
     if (identifiers.tenantId) {
       processZApiWebhook(validatedEvent, identifiers.tenantId)
+        .then(result => console.log('[Webhook Processed Successfully]', result))
         .catch(err => console.error('[Webhook Processing Error]', err));
     }
 
