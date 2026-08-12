@@ -626,5 +626,58 @@ pm2 logs iaezap --lines 50 --nostream | grep -A 15 "Z-API Processor Error"
 
 This will show the exact error that's preventing data from being saved.
 
+### Full Error Details
+```
+[Z-API Processor Error] {
+  eventType: 'receive',
+  tenantId: '6e18da71-4ca4-41f7-90c6-318d79f6637b',
+  error: 'Failed to query conversation: permission denied for table conversations'
+}
+```
+
+### ROOT CAUSE IDENTIFIED
+**This is the ORIGINAL RLS error from Problem 1!**
+
+The environment variables ARE being logged as loaded (`[Env Loader] Successfully loaded .env.production`), BUT:
+1. The Supabase client in z-api-processor.ts is still getting permission denied
+2. This means SERVICE_ROLE_KEY is NOT in process.env when the processor runs
+3. Problem: The Next.js process started by `spawn()` is NOT inheriting the env object properly
+
+Even though we pass `env` to spawn(), the child process (next start) doesn't inherit it correctly.
+
+### Root Cause Analysis
+The issue is that `node_modules/.bin/next` is a bash script/wrapper, not a direct Node.js executable. When we spawn it with a custom env object, the wrapper script may not properly pass the env to the actual Node.js process.
+
 ### Status
-🔄 IN PROGRESS - Need to see full processor error
+❌ REPEATING ERROR - Environment inheritance still not working with spawn()
+
+---
+
+## Problem 1 (REVISITED): RLS Permission Denied - Round 2
+**Date**: 2026-08-12
+**Severity**: CRITICAL
+**Original Problem**: `permission denied for table conversations` 
+**Current Status**: STILL OCCURRING despite all attempts
+
+### Why Previous Solutions Failed
+1. **Problem 3 (start.sh)**: Bash env loading doesn't inherit to child process
+2. **Problem 6 (start-env.js v1)**: Direct Next.js API call was incorrect
+3. **Problem 11 (start-env.js v2)**: spawn() with env object doesn't properly inherit to bash wrapper
+
+### The Real Solution
+We need to set environment variables BEFORE Next.js is even executed. Options:
+1. Use PM2 env_file configuration instead of custom start script
+2. Use a direct Node.js entry point that loads env, then requires Next.js modules
+3. Write env vars to actual system environment before spawning
+
+### Recommended Solution
+Modify PM2 ecosystem.config.js or use PM2 with env_file:
+```bash
+pm2 ecosystem generate
+# Edit ecosystem.config.js to use env_file
+```
+
+Or use simpler approach: directly run next in-process after loading env
+
+### Status
+🔄 IN PROGRESS - Need different approach to environment variable passing
