@@ -6,12 +6,12 @@ import { z } from 'zod';
  */
 export const loginRequestSchema = z.object({
   email: z
-    .string({ required_error: 'Email is required' })
+    .string()
     .email('Invalid email format')
     .toLowerCase()
     .trim(),
   password: z
-    .string({ required_error: 'Password is required' })
+    .string()
     .min(6, 'Password must be at least 6 characters')
     .max(128, 'Password must not exceed 128 characters'),
   rememberMe: z.boolean().optional().default(false),
@@ -23,12 +23,12 @@ export const loginRequestSchema = z.object({
  */
 export const registerRequestSchema = z.object({
   email: z
-    .string({ required_error: 'Email is required' })
+    .string()
     .email('Invalid email format')
     .toLowerCase()
     .trim(),
   password: z
-    .string({ required_error: 'Password is required' })
+    .string()
     .min(8, 'Password must be at least 8 characters')
     .max(128, 'Password must not exceed 128 characters')
     .regex(
@@ -36,17 +36,17 @@ export const registerRequestSchema = z.object({
       'Password must contain uppercase, lowercase, number, and special character'
     ),
   firstName: z
-    .string({ required_error: 'First name is required' })
+    .string()
     .min(2, 'First name must be at least 2 characters')
     .max(50, 'First name must not exceed 50 characters')
     .trim(),
   lastName: z
-    .string({ required_error: 'Last name is required' })
+    .string()
     .min(2, 'Last name must be at least 2 characters')
     .max(50, 'Last name must not exceed 50 characters')
     .trim(),
   acceptTerms: z
-    .boolean({ required_error: 'You must accept terms and conditions' })
+    .boolean()
     .refine((val) => val === true, 'You must accept terms and conditions'),
 });
 
@@ -56,23 +56,21 @@ export const registerRequestSchema = z.object({
  */
 export const tokenPayloadSchema = z.object({
   sub: z
-    .string({ required_error: 'Subject (user ID) is required' })
+    .string()
     .uuid('Invalid user ID format'),
   email: z
-    .string({ required_error: 'Email is required' })
+    .string()
     .email('Invalid email format'),
   roles: z
     .array(
-      z.enum(['admin', 'moderator', 'user'], {
-        errorMap: () => ({ message: 'Invalid role' }),
-      })
+      z.enum(['admin', 'moderator', 'user'])
     )
     .default(['user']),
   iat: z
-    .number({ required_error: 'Issued at timestamp is required' })
+    .number()
     .int('Invalid timestamp'),
   exp: z
-    .number({ required_error: 'Expiration timestamp is required' })
+    .number()
     .int('Invalid timestamp'),
   aud: z
     .string()
@@ -101,13 +99,13 @@ export const authResponseSchema = z.object({
   }),
   tokens: z.object({
     accessToken: z
-      .string({ required_error: 'Access token is required' })
+      .string()
       .min(1, 'Access token cannot be empty'),
     refreshToken: z
-      .string({ required_error: 'Refresh token is required' })
+      .string()
       .min(1, 'Refresh token cannot be empty'),
     expiresIn: z
-      .number({ required_error: 'Token expiration time is required' })
+      .number()
       .positive('Token expiration must be positive'),
     tokenType: z
       .enum(['Bearer'])
@@ -137,13 +135,10 @@ export const authErrorSchema = z.object({
         'FORBIDDEN',
         'INTERNAL_SERVER_ERROR',
         'RATE_LIMIT_EXCEEDED',
-      ],
-      {
-        errorMap: () => ({ message: 'Invalid error code' }),
-      }
+      ]
     ),
     message: z
-      .string({ required_error: 'Error message is required' })
+      .string()
       .min(1, 'Error message cannot be empty'),
     details: z
       .record(z.string(), z.any())
@@ -166,7 +161,7 @@ export const authErrorSchema = z.object({
  */
 export const refreshTokenSchema = z.object({
   refreshToken: z
-    .string({ required_error: 'Refresh token is required' })
+    .string()
     .min(1, 'Refresh token cannot be empty'),
 });
 
@@ -175,7 +170,7 @@ export const refreshTokenSchema = z.object({
  */
 export const resetPasswordSchema = z.object({
   email: z
-    .string({ required_error: 'Email is required' })
+    .string()
     .email('Invalid email format')
     .toLowerCase()
     .trim(),
@@ -186,10 +181,10 @@ export const resetPasswordSchema = z.object({
  */
 export const resetPasswordConfirmSchema = z.object({
   token: z
-    .string({ required_error: 'Reset token is required' })
+    .string()
     .min(1, 'Reset token cannot be empty'),
   password: z
-    .string({ required_error: 'New password is required' })
+    .string()
     .min(8, 'Password must be at least 8 characters')
     .max(128, 'Password must not exceed 128 characters')
     .regex(

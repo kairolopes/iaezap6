@@ -33,27 +33,22 @@ const isoDateTimeSchema = z
  * Message type enumeration
  * Represents all supported message types in Z-API
  */
-export const messageTypeEnum = z.enum(
-  [
-    'text',
-    'image',
-    'video',
-    'document',
-    'audio',
-    'location',
-    'contact',
-    'link',
-    'sticker',
-    'template',
-    'reaction',
-    'poll',
-    'button',
-    'list',
-  ],
-  {
-    errorMap: () => ({ message: 'Invalid message type' }),
-  }
-);
+export const messageTypeEnum = z.enum([
+  'text',
+  'image',
+  'video',
+  'document',
+  'audio',
+  'location',
+  'contact',
+  'link',
+  'sticker',
+  'template',
+  'reaction',
+  'poll',
+  'button',
+  'list',
+]);
 
 export type MessageType = z.infer<typeof messageTypeEnum>;
 
@@ -61,9 +56,7 @@ export type MessageType = z.infer<typeof messageTypeEnum>;
  * Delivery status enumeration
  * Represents delivery states for messages
  */
-export const deliveryStatusEnum = z.enum(['sent', 'delivered', 'pending', 'failed'], {
-  errorMap: () => ({ message: 'Invalid delivery status' }),
-});
+export const deliveryStatusEnum = z.enum(['sent', 'delivered', 'pending', 'failed']);
 
 export type DeliveryStatus = z.infer<typeof deliveryStatusEnum>;
 
@@ -71,9 +64,7 @@ export type DeliveryStatus = z.infer<typeof deliveryStatusEnum>;
  * Message status enumeration
  * Represents state changes for messages
  */
-export const messageStatusEnum = z.enum(['read', 'replied', 'deleted', 'edited'], {
-  errorMap: () => ({ message: 'Invalid message status' }),
-});
+export const messageStatusEnum = z.enum(['read', 'replied', 'deleted', 'edited']);
 
 export type MessageStatus = z.infer<typeof messageStatusEnum>;
 
@@ -81,21 +72,16 @@ export type MessageStatus = z.infer<typeof messageStatusEnum>;
  * Disconnection reason enumeration
  * Represents reasons for connection loss
  */
-export const disconnectReasonEnum = z.enum(
-  [
-    'user_logout',
-    'network_error',
-    'device_turned_off',
-    'session_expired',
-    'force_disconnected',
-    'invalid_credentials',
-    'too_many_attempts',
-    'unknown',
-  ],
-  {
-    errorMap: () => ({ message: 'Invalid disconnect reason' }),
-  }
-);
+export const disconnectReasonEnum = z.enum([
+  'user_logout',
+  'network_error',
+  'device_turned_off',
+  'session_expired',
+  'force_disconnected',
+  'invalid_credentials',
+  'too_many_attempts',
+  'unknown',
+]);
 
 export type DisconnectReason = z.infer<typeof disconnectReasonEnum>;
 
@@ -122,9 +108,7 @@ const baseWebhookSchema = z.object({
  */
 export const deliveryEventSchema = z
   .object({
-    type: z.literal('delivery', {
-      errorMap: () => ({ message: 'Event type must be "delivery"' }),
-    }),
+    type: z.literal('delivery'),
     messageId: messageIdSchema.describe('ID of the delivered message'),
     status: deliveryStatusEnum.describe('Delivery status'),
     recipient: phoneNumberSchema.describe('Recipient phone number'),
@@ -152,9 +136,7 @@ export type DeliveryEvent = z.infer<typeof deliveryEventSchema>;
  */
 export const receiveEventSchema = z
   .object({
-    type: z.literal('receive', {
-      errorMap: () => ({ message: 'Event type must be "receive"' }),
-    }),
+    type: z.literal('receive'),
     messageId: messageIdSchema.describe('Unique message identifier'),
     senderPhone: phoneNumberSchema.describe('Sender phone number'),
     sender: z
@@ -277,9 +259,7 @@ export type MediaReceiveEvent = ReceiveEvent & {
  */
 export const statusEventSchema = z
   .object({
-    type: z.literal('status', {
-      errorMap: () => ({ message: 'Event type must be "status"' }),
-    }),
+    type: z.literal('status'),
     messageId: messageIdSchema.describe('ID of the message whose status changed'),
     status: messageStatusEnum.describe('New message status'),
     contactPhone: phoneNumberSchema
@@ -332,9 +312,7 @@ export type StatusEvent = z.infer<typeof statusEventSchema>;
  */
 export const disconnectedEventSchema = z
   .object({
-    type: z.literal('disconnected', {
-      errorMap: () => ({ message: 'Event type must be "disconnected"' }),
-    }),
+    type: z.literal('disconnected'),
     reason: disconnectReasonEnum.describe('Reason for disconnection'),
     message: z
       .string()
