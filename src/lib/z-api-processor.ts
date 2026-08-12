@@ -102,9 +102,17 @@ async function handleReceiveEvent(
   const supabase = createSupabaseServerClient();
 
   try {
+    console.log('[handleReceiveEvent] Processing receive event:', {
+      tenantId,
+      senderPhone: (event as any).senderPhone,
+      messageId: (event as any).messageId,
+      messageType: (event as any).messageType,
+    });
+
     // Extract phone number and sender info
     const phoneNumber = event.senderPhone || getPhoneFromEvent(event);
     if (!phoneNumber) {
+      console.log('[handleReceiveEvent] ERROR: No phone number found');
       return {
         success: false,
         error: 'No phone number found in receive event',
@@ -115,6 +123,11 @@ async function handleReceiveEvent(
 
     // Extract message content
     const messageContent = getMessageContent(event);
+    console.log('[handleReceiveEvent] Extracted data:', {
+      phoneNumber,
+      senderName,
+      messageContent: messageContent?.substring(0, 50),
+    });
 
     // Step 1: Check if conversation exists
     const { data: existingConversation, error: selectError } = await supabase
