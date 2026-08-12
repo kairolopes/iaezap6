@@ -1,4 +1,6 @@
 #!/bin/bash
 
-# Use Node.js wrapper that loads .env.production directly in Node process
-exec node start-env.js
+# This script is used by package.json start command
+# PM2 manages environment loading via ecosystem.config.js (env_file: .env.production)
+# Simply delegate to PM2 or run next start directly
+exec node_modules/.bin/next start
