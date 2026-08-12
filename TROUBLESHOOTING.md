@@ -991,5 +991,25 @@ script: './start-production.sh',
 
 This is the ONLY approach that guarantees env vars are available before ANY Node.js code runs.
 
+### Bash Wrapper Deployment Result
+✅ Bash wrapper loads env vars correctly
+❌ But `node_modules/.bin/next` script doesn't pass them to Node.js child
+
+The issue: `node_modules/.bin/next` is a bash wrapper script that may not inherit parent env properly.
+
+### SOLUTION: Call Node.js directly
+
+Change start-production.sh from:
+```bash
+exec node_modules/.bin/next start
+```
+
+To:
+```bash
+exec node node_modules/next/dist/bin/next.js start
+```
+
+This calls Node.js DIRECTLY with the Next.js entry point, ensuring variables are inherited.
+
 ### Status
-🔴 REPEATING RLS ERROR - Need bash-only solution
+🔴 REPEATING RLS ERROR - Final solution: direct Node.js call needed

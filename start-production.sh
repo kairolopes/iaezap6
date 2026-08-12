@@ -1,16 +1,15 @@
 #!/bin/bash
 
-# FINAL SOLUTION: Pure bash wrapper to load env vars BEFORE any Node.js code
-# set -a exports all variables, set +a stops exporting
-
+# FINAL SOLUTION: Load env vars, then call Node.js DIRECTLY with Next.js entry point
 set -a
 source .env.production
 set +a
 
 echo "[start-production.sh] Environment loaded from .env.production"
 if [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-  echo "[start-production.sh] ✓ SUPABASE_SERVICE_ROLE_KEY is set"
+  echo "[start-production.sh] ✓ SUPABASE_SERVICE_ROLE_KEY is set: ${SUPABASE_SERVICE_ROLE_KEY:0:20}..."
 fi
 
-# NOW execute next start with full environment
-exec node_modules/.bin/next start
+# Call Node.js DIRECTLY with Next.js entry point (not via wrapper script)
+# This ensures env vars are properly inherited
+exec node node_modules/next/dist/bin/next.js start
