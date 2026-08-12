@@ -1266,5 +1266,39 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;
 3. Execute
 4. Test webhook again
 
+### SQL Execution Result
+✅ **SUCCESS!** Permissions granted to service_role
+
+### Final Test After Permission Fix
+```
+[2026-08-12T23:56:56.043Z] STEP 1: Checking conversation
+[2026-08-12T23:56:56.908Z] STEP 1 OK: conversation exists = false
+[2026-08-12T23:56:56.908Z] STEP 2: Creating/fetching conversation
+[2026-08-12T23:56:57.862Z] STEP 2 OK: Created conversation e6f38e6d-2c88-466d-a958-e8dd1a146fe1
+[2026-08-12T23:56:57.863Z] STEP 3: Inserting message
+[2026-08-12T23:56:58.369Z] STEP 3 OK: Created message 444d9255-4a84-42f7-9078-36dd0e0f65d3
+[2026-08-12T23:56:59.074Z] handleReceiveEvent SUCCESS: conversationId=e6f38e6d-2c88-466d-a958-e8dd1a146fe1, messageId=444d9255-4a84-42f7-9078-36dd0e0f65d3
+```
+
 ### Status
-🔄 AWAITING SQL EXECUTION - This will fix the permission denied errors
+✅ **RESOLVED** - Webhook processor now saves data to Supabase successfully!
+
+---
+
+## 🎉 ROOT CAUSE IDENTIFIED & FIXED
+
+**The entire issue was: SERVICE_ROLE missing table permissions in Supabase**
+
+All previous attempts failed because:
+1. ✅ Environment variables WERE loaded correctly
+2. ✅ Supabase client WAS created with SERVICE_ROLE_KEY
+3. ❌ BUT the service_role role didn't have SELECT/INSERT permissions on tables
+
+**Solution**: Execute SQL to grant permissions:
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.conversations TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.messages TO service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;
+```
+
+**Result**: Webhook now processes and saves data successfully! ✅
