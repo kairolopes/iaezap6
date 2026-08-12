@@ -1136,5 +1136,88 @@ This is the easiest way to verify data persistence.
 ### Verification Method
 ✅ Use Supabase Web Dashboard instead of VPS psql
 
+### Verification Result
+❌ **EMPTY RESULT** - No conversations found for tenant_id!
+
+```bash
+curl -s "https://nnivicvnhzwucmbvakjh.supabase.co/rest/v1/conversations?tenant_id=eq.6e18da71-4ca4-41f7-90c6-318d79f6637b&select=*" \
+  -H "Authorization: Bearer ..." | Result: []
+```
+
 ### Status
-🔄 AWAITING - User to check Supabase dashboard
+❌ FAILED - Processor ran without errors but data not persisted
+
+---
+
+## Problem 19: Processor Completes Successfully But Data Not Saved
+**Date**: 2026-08-12
+**Severity**: CRITICAL
+**Pattern**: Fire-and-forget processor shows "[Webhook Processed Successfully]" but zero rows in conversations table
+
+### Current Evidence
+1. ✅ Webhook endpoint: returns 200 success
+2. ✅ Webhook validation: passes correctly
+3. ✅ Processor invocation: `[Webhook Processed Successfully]` appears in logs
+4. ❌ Database persistence: ZERO rows in conversations table
+5. ❌ No processor errors in logs
+
+### Root Cause (Possibilities)
+1. Processor completes promise WITHOUT actually saving to database
+2. Processor saves but to wrong tenant_id
+3. Processor throws error AFTER logging "successfully"
+4. RLS policies are silently blocking inserts
+
+### Solution
+Need to examine processor code to see:
+1. What does processZApiWebhook() return on success?
+2. Is it actually calling Supabase insert methods?
+3. Are there any silent error handlers?
+
+Check z-api-processor.ts handleReceiveEvent() function to verify database save logic.
+
+### Investigation Steps
+1. Add detailed logging inside handleReceiveEvent() to see exact point where data is not saved
+2. Check if Supabase insert is actually being called
+3. Verify RLS policies allow inserts from SERVICE_ROLE_KEY
+
+### Status
+🔄 INVESTIGATING - Processor runs but doesn't save
+
+---
+
+## Problem 20: SERVICE_ROLE_KEY Loaded But RLS Still Blocking
+**Date**: 2026-08-12
+**Severity**: CRITICAL
+**Finding**: Environment variables ARE loaded, but Supabase still returns "permission denied"
+
+### Investigation Results
+1. ✅ Debug logging shows NO "Missing Supabase environment variables" error
+2. ✅ This means SERVICE_ROLE_KEY IS in process.env
+3. ❌ But Supabase still returns "permission denied for table conversations"
+
+### Exact Error Location
+```
+[2026-08-12T23:46:47...] handleReceiveEvent START
+[2026-08-12T23:46:47...] STEP 1: Checking conversation
+[Error] ERROR at STEP 1: permission denied for table conversations
+```
+
+### Root Cause Analysis
+**The Supabase client is created SUCCESSFULLY (no env var error)**, but the RLS policy on `conversations` table is still blocking the SELECT query.
+
+Possible reasons:
+1. **RLS Policy Issue**: The policy might be checking wrong conditions
+2. **Service Role Key Not Actually Used**: The SERVICE_ROLE_KEY might not be properly passed to Supabase client
+3. **RLS Enabled for Service Role**: Unusual but possible - some configs force RLS even for service role
+4. **Wrong Key Value**: SERVICE_ROLE_KEY might be set to wrong value
+
+### Next Investigation Step
+Need to check the RLS policies in Supabase:
+
+1. Go to Supabase Dashboard → Authentication → Policies
+2. Check `conversations` table RLS policies
+3. Verify that service role can bypass RLS OR policy allows service role access
+4. Or check if RLS is completely disabled (which it should be for service role)
+
+### Status
+🔄 NEED TO VERIFY - RLS policy configuration in Supabase dashboard
