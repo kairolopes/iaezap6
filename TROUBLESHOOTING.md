@@ -591,5 +591,40 @@ curl -s -X POST "https://iaezap.com.br/api/webhooks/z-api?tenantId=6e18da71-4ca4
   }'
 ```
 
+### Test Result
+✅ **Webhook validation PASSED!**
+- Response: `{"success":true,"message":"Webhook received and validated"...}`
+- Logs show: `[handleReceiveEvent] Processing receive event`
+- Logs show: `[handleReceiveEvent] Extracted data`
+
+BUT: **Processor still has error** - `[Z-API Processor Error]` appears in logs
+
 ### Status
-🔄 IN PROGRESS - Testing with valid UUID format
+✅ FIXED - UUID format works, webhook validates correctly
+❌ NEW ISSUE - Processor throws error after validation
+
+---
+
+## Problem 13: Processor Error After Successful Webhook Validation
+**Date**: 2026-08-12
+**Severity**: CRITICAL
+**Error**: `[Z-API Processor Error]` - error details not visible in grep output
+
+### Current Symptoms
+1. ✅ Webhook endpoint receives request
+2. ✅ Webhook validates successfully (returns 200)
+3. ✅ Processor is invoked (logs show [handleReceiveEvent])
+4. ✅ Data is extracted (logs show [handleReceiveEvent] Extracted data)
+5. ❌ But processor throws error after extraction
+6. ❌ No data in Supabase (presumably)
+
+### Solution
+View full error details:
+```bash
+pm2 logs iaezap --lines 50 --nostream | grep -A 15 "Z-API Processor Error"
+```
+
+This will show the exact error that's preventing data from being saved.
+
+### Status
+🔄 IN PROGRESS - Need to see full processor error
