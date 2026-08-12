@@ -59,3 +59,35 @@ Keep commands in proper context:
 
 ### Status
 ✅ FIXED - Execute commands in proper shell context
+
+---
+
+## Problem 4: Webhook Validation Passing but Data Not Persisting (Return to Original Issue)
+**Date**: 2026-08-12
+**Severity**: CRITICAL
+**Error**: `Success. No rows returned` when querying Supabase after webhook
+
+### Root Cause (Updated)
+Previous attempt to fix webhook processing failed due to env var loading issue. After implementing start.js to load .env.production:
+1. Webhook validation: ✅ PASSING (returns success:true with correct eventId)
+2. Processor invocation: UNKNOWN (fire-and-forget, no direct error visibility)
+3. Database persistence: 🔄 TESTING (about to verify in Supabase)
+
+### Solution (Verification Step)
+1. Query Supabase conversations table: Check if new conversation was created
+2. Query messages table: Check if message "NOVO TEST!" was inserted
+3. If no rows: Check PM2 logs for processor errors and add more detailed logging
+
+### Current Action
+Just sent webhook:
+```
+messageId: 550e8400-e29b-41d4-a716-446655440011
+senderPhone: 5511988888888
+messageText: "NOVO TEST!"
+timestamp: 1723493857
+```
+
+Expected result: New conversation + message in Supabase
+
+### Status
+🔄 AWAITING VERIFICATION - Checking Supabase for persisted data
