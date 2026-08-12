@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { createServer } = require('http');
 const fs = require('fs');
 const path = require('path');
 
@@ -27,5 +28,21 @@ if (fs.existsSync(envPath)) {
   console.warn('[Env Loader] .env.production not found');
 }
 
+// Ensure NODE_ENV is set to production
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'production';
+}
+
 // NOW import and start Next.js
-require('next/dist/bin/next')(['start']);
+const { default: next } = require('next');
+const app = next({ dev: false, dir: __dirname });
+const handle = app.getRequestHandler();
+
+app.prepare().then(() => {
+  createServer((req, res) => handle(req, res)).listen(3000, '0.0.0.0', () => {
+    console.log('[Server] Next.js started on port 3000');
+  });
+}).catch(err => {
+  console.error('[Server Error]', err);
+  process.exit(1);
+});

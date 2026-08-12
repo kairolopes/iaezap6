@@ -394,5 +394,68 @@ Then rebuild and restart:
 npm run build && pm2 restart iaezap
 ```
 
+### Resolution
+✅ **FIXED** - Force reset resolved conflict
+- start-env.js deployed successfully
+- Environment variables ARE loading correctly
+- Log shows: `[Env Loader] Successfully loaded .env.production`
+- Log shows: `[Env Loaded] SUPABASE_SERVICE_ROL... = sb_secret_uh1cDxnWtz...`
+
 ### Status
-🔄 IN PROGRESS - Resolving merge conflict with force reset
+✅ FIXED - Merge conflict resolved
+
+---
+
+## Problem 10: Incorrect Next.js Module Path in start-env.js
+**Date**: 2026-08-12
+**Severity**: CRITICAL
+**Error**: `require('next/dist/bin/next')(['start'])` - Error at line 31 of start-env.js
+
+### Current Symptoms
+1. ✅ Environment variables ARE loading correctly
+2. ✅ start-env.js is running and logs env loading
+3. ❌ Error when trying to require Next.js internal module
+4. ❌ 502 Bad Gateway from Nginx (process failed to start)
+
+### Root Cause
+The internal module path `'next/dist/bin/next'` is not correct for Next.js 16.3.0. This causes the process to crash immediately after loading env vars.
+
+Correct approach: Use the next CLI via `require('next').startServer()` or via child process.
+
+### Solution
+Fix start-env.js to properly start Next.js:
+```javascript
+const { createServer } = require('http');
+const fs = require('fs');
+const path = require('path');
+
+// Load .env.production FIRST
+const envPath = path.join(__dirname, '.env.production');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  envContent.split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const [key, ...valueParts] = trimmed.split('=');
+      if (key) {
+        process.env[key.trim()] = valueParts.join('=').trim();
+      }
+    }
+  });
+  console.log('[Env Loader] Environment variables loaded');
+}
+
+// Import and start Next.js AFTER env is set
+const { default: next } = require('next');
+const app = next({ dev: false, dir: __dirname });
+const handle = app.getRequestHandler();
+
+app.prepare().then(() => {
+  createServer((req, res) => handle(req, res)).listen(3000, '0.0.0.0', () => {
+    console.log('[Server] Next.js started on port 3000');
+  });
+});
+```
+
+### Status
+🔄 IN PROGRESS - Fixing Next.js initialization
