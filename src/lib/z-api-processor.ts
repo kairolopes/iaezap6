@@ -2,11 +2,11 @@ import { createSupabaseServerClient } from './supabase';
 import { triggerMessageRules } from './message-rules';
 import {
   WebhookEvent,
-  isReceiveEvent,
-  isStatusEvent,
-  isDeliveryEvent,
   getMessageContent,
   getPhoneFromEvent,
+  type ReceiveEvent,
+  type StatusEvent,
+  type DeliveryEvent,
 } from '@/types/z-api';
 
 /**
@@ -46,11 +46,11 @@ export async function processZApiWebhook(
     // Dispatch to appropriate handler based on event type
     switch (event.type) {
       case 'receive':
-        return await handleReceiveEvent(event, tenantId);
+        return await handleReceiveEvent(event as ReceiveEvent, tenantId);
       case 'status':
-        return await handleStatusEvent(event, tenantId);
+        return await handleStatusEvent(event as StatusEvent, tenantId);
       case 'delivery':
-        return await handleDeliveryEvent(event, tenantId);
+        return await handleDeliveryEvent(event as DeliveryEvent, tenantId);
       default:
         // Silently ignore other event types (disconnected, etc.)
         return {
