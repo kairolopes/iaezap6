@@ -845,5 +845,69 @@ npm install --save-dev dotenv
 
 Then commit and deploy.
 
+### Installation Result
+✅ dotenv installed successfully
+
+But now new error:
+```
+TypeError: require(...) is not a function
+    at Object.<anonymous> (/home/iaezap/server.js:13:30)
+```
+
+The require('next/dist/bin/next') doesn't return a callable function.
+
 ### Status
-🔄 IN PROGRESS - Installing dotenv package
+❌ dotenv installed but server.js approach still wrong
+
+---
+
+## Problem 16: Incorrect Next.js CLI Invocation in server.js
+**Date**: 2026-08-12
+**Severity**: HIGH
+**Error**: `TypeError: require(...) is not a function`
+
+### Root Cause
+`require('next/dist/bin/next')` doesn't return a function. The Next.js CLI structure is different than assumed.
+
+### SIMPLEST SOLUTION
+Don't try to require Next.js directly. Instead:
+1. Load dotenv first
+2. Spawn `next start` as a child process (which now has env vars in parent)
+
+```javascript
+// server.js - FINAL VERSION
+require('dotenv').config({ path: '.env.production' });
+console.log('[Server] Environment loaded from .env.production');
+
+const { spawn } = require('child_process');
+
+// Spawn next start - inherits parent process env (which has dotenv vars loaded)
+const next = spawn('npm', ['start', '--', '--skip-env-validation'], {
+  stdio: 'inherit',
+  cwd: __dirname,
+});
+
+next.on('exit', (code) => process.exit(code || 1));
+```
+
+BUT WAIT - this creates recursion (npm start calls server.js which calls npm start).
+
+### ACTUAL SIMPLEST SOLUTION
+Change ecosystem.config.js to use bash wrapper that loads dotenv:
+
+ecosystem.config.js:
+```javascript
+script: './load-env.sh',
+```
+
+load-env.sh:
+```bash
+#!/bin/bash
+export $(cat .env.production | grep -v '^#' | xargs)
+exec next start
+```
+
+This is the SIMPLEST and most reliable approach.
+
+### Status
+🔄 IN PROGRESS - Creating load-env.sh wrapper
