@@ -2,11 +2,9 @@ module.exports = {
   apps: [
     {
       name: 'iaezap',
-      script: './node_modules/.bin/next',
-      args: 'start',
+      script: './server.js',
       instances: 1,
       exec_mode: 'fork',
-      env_file: '.env.production',
       env: {
         NODE_ENV: 'production',
         PORT: 3000,

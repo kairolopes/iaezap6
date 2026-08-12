@@ -753,6 +753,66 @@ This shows the processor IS running and extracting data correctly!
 ### Next: Test if RLS permission error is resolved
 Send a new webhook and check if processor completes without RLS error.
 
+### Test Result
+❌ **FAILED** - RLS error STILL appears!
+
+```
+[Z-API Processor Error] {
+  error: 'Failed to query conversation: permission denied for table conversations'
+}
+```
+
+Even with ecosystem.config.js using env_file, the error persists. This means:
+1. PM2 env_file is NOT working as expected
+2. OR Next.js/Supabase modules are imported BEFORE env vars are loaded
+3. OR there's a timing issue with when variables are loaded
+
 ### Status
-✅ PM2 ecosystem config deployed
-🔄 Testing if RLS permission error is resolved
+❌ PM2 ecosystem.config.js did NOT resolve RLS error - STILL LOOPING
+
+---
+
+## Problem 14: CRITICAL - Environment Variable Loading Loop
+**Date**: 2026-08-12
+**Severity**: CRITICAL
+**Pattern**: Attempted 5+ different solutions, all failed with same RLS error
+
+### Root Cause (Final Analysis)
+The core issue is that **Supabase client is being instantiated BEFORE environment variables are available**.
+
+In z-api-processor.ts:
+```typescript
+import { createSupabaseServerClient } from './supabase';
+// createSupabaseServerClient tries to read SUPABASE_SERVICE_ROLE_KEY
+// But if this import happens before env vars are loaded, it fails
+```
+
+All previous solutions failed because they tried to load env vars AFTER module imports started.
+
+### THE REAL SOLUTION
+Load env vars with **require() AT THE VERY TOP** of the entry point, before ANY other imports.
+
+Create a new entry point that uses `require('dotenv').config()`:
+
+**File: server.js** (new entry point)
+```javascript
+// MUST be first line - load env vars before anything else
+require('dotenv').config({ path: '.env.production' });
+
+// NOW start Next.js after env is loaded
+require('next/dist/bin/next')(['start']);
+```
+
+Then use this as the start script in package.json:
+```json
+"start": "node server.js"
+```
+
+And in ecosystem.config.js, change script to:
+```javascript
+script: './server.js',
+args: '',
+```
+
+### Status
+🔄 IN PROGRESS - Creating server.js entry point with dotenv at top
