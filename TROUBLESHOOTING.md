@@ -271,5 +271,95 @@ Check if environment variables are actually being loaded:
    ```
 3. Check if the exact error point in logs to understand where it fails
 
+### Verification Result
+✅ **ENV VARS ARE LOADING CORRECTLY**
+```
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_[LOADED]
+SERVICE_ROLE_KEY loaded: sb_secret_[LOADED_CORRECTLY]
+```
+
+The bash script CAN load variables successfully! But the process still gets permission denied.
+
+### New Root Cause
+The environment variables are loaded in the bash shell, but they're NOT being passed to the child Node.js process started by `node_modules/.bin/next start`.
+
+In start.sh:
+```bash
+export $(cat .env.production | grep -v '^#' | xargs)
+exec node_modules/.bin/next start
+```
+
+The `exec` statement should pass the environment, but `node_modules/.bin/next` might be a symlink or wrapper that doesn't inherit the parent environment properly.
+
+### Solution
+Use explicit environment passing in start.sh:
+```bash
+#!/bin/bash
+export $(cat .env.production | grep -v '^#' | xargs)
+export NODE_ENV=production
+exec node -e "
+  const vars = require('fs').readFileSync('.env.production', 'utf8')
+    .split('\n')
+    .filter(l => l && !l.startsWith('#'))
+    .reduce((acc, line) => {
+      const [k, ...v] = line.split('=');
+      acc[k] = v.join('=');
+      return acc;
+    }, {});
+  Object.assign(process.env, vars);
+  require('next/dist/server/lib/start-server').startServer({});
+"
+```
+
+Or simpler: directly run the compiled server with proper env.
+
+### File Status Check
+✅ **start.sh file is CORRECT**:
+```bash
+#!/bin/bash
+if [ -f .env.production ]; then
+  export $(cat .env.production | grep -v '^#' | xargs)
+fi
+exec node_modules/.bin/next start
+```
+
+BUT: The `node_modules/.bin/next` script might not inherit the bash environment properly.
+
+### Solution (Best Approach)
+Create a Node.js wrapper (start-env.js) that:
+1. Loads .env.production directly in Node.js (before any module imports)
+2. Calls require('next/start') after env is set
+3. Avoids bash environment inheritance issues
+
+New start.sh:
+```bash
+#!/bin/bash
+exec node start-env.js
+```
+
+New start-env.js:
+```javascript
+const fs = require('fs');
+const path = require('path');
+
+// Load .env.production BEFORE importing Next.js
+const envPath = path.join(__dirname, '.env.production');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  envContent.split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const [key, ...valueParts] = trimmed.split('=');
+      if (key) {
+        process.env[key] = valueParts.join('=');
+      }
+    }
+  });
+}
+
+// NOW import and start Next.js
+require('next/dist/bin/next')(['start']);
+```
+
 ### Status
-🔄 IN PROGRESS - Investigating why env vars not loading from start.sh
+🔄 IN PROGRESS - Creating Node.js wrapper to load env vars properly
