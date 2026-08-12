@@ -1021,5 +1021,31 @@ cd /home/iaezap && git fetch origin main && git reset --hard origin/main && pm2 
 
 Then test webhook again.
 
+### Test Result
+✅ **ZERO Processor Errors!** But 502 Bad Gateway
+❌ **Module not found**: `/home/iaezap/node_modules/next/dist/bin/next.js`
+
+The file path for Next.js entry point is wrong on this version.
+
+### REAL FINAL SOLUTION
+Use `npm start` in the bash script - it handles the path correctly:
+
+```bash
+#!/bin/bash
+set -a
+source .env.production
+set +a
+
+echo "[start-production.sh] Environment loaded from .env.production"
+if [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+  echo "[start-production.sh] ✓ SUPABASE_SERVICE_ROLE_KEY is set"
+fi
+
+# Use npm start which properly resolves the Next.js entry point
+exec npm start
+```
+
+This delegates to package.json's start script which knows the correct path.
+
 ### Status
-🔄 FINAL ATTEMPT - Forcing git reset and testing direct Node.js call
+🔄 FINAL - Using npm start instead of direct Node.js call

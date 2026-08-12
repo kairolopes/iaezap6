@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# FINAL SOLUTION: Load env vars, then call Node.js DIRECTLY with Next.js entry point
+# ULTIMATE SOLUTION: Load env vars from .env.production, then run npm start
 set -a
 source .env.production
 set +a
@@ -10,6 +10,6 @@ if [ -n "$SUPABASE_SERVICE_ROLE_KEY" ]; then
   echo "[start-production.sh] ✓ SUPABASE_SERVICE_ROLE_KEY is set: ${SUPABASE_SERVICE_ROLE_KEY:0:20}..."
 fi
 
-# Call Node.js DIRECTLY with Next.js entry point (not via wrapper script)
-# This ensures env vars are properly inherited
-exec node node_modules/next/dist/bin/next.js start
+# Delegate to npm start which properly resolves package.json start script
+# npm start runs: bash start.sh -> next start
+exec npm start
