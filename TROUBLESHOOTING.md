@@ -1011,5 +1011,15 @@ exec node node_modules/next/dist/bin/next.js start
 
 This calls Node.js DIRECTLY with the Next.js entry point, ensuring variables are inherited.
 
+### Deployment Status
+Git merge conflict on VPS - start-production.sh has local changes
+
+Solution: Force reset to get latest version
+```bash
+cd /home/iaezap && git fetch origin main && git reset --hard origin/main && pm2 delete iaezap && pm2 start ecosystem.config.js && pm2 save && sleep 3
+```
+
+Then test webhook again.
+
 ### Status
-🔴 REPEATING RLS ERROR - Final solution: direct Node.js call needed
+🔄 FINAL ATTEMPT - Forcing git reset and testing direct Node.js call
