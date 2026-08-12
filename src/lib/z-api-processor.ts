@@ -1,3 +1,4 @@
+import { appendFileSync } from 'fs';
 import { createSupabaseServerClient } from './supabase';
 import { triggerMessageRules } from './message-rules';
 import {
@@ -102,6 +103,9 @@ async function handleReceiveEvent(
   const supabase = createSupabaseServerClient();
 
   try {
+    const logEntry = `[${new Date().toISOString()}] handleReceiveEvent START: tenantId=${tenantId}, senderPhone=${(event as any).senderPhone}, messageId=${(event as any).messageId}\n`;
+    appendFileSync('/tmp/iaezap-webhook.log', logEntry);
+
     console.log('[handleReceiveEvent] Processing receive event:', {
       tenantId,
       senderPhone: (event as any).senderPhone,
