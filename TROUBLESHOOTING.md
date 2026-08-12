@@ -679,5 +679,45 @@ pm2 ecosystem generate
 
 Or use simpler approach: directly run next in-process after loading env
 
+### FINAL SOLUTION
+Use PM2's built-in `env_file` configuration in ecosystem.config.js:
+
+**Created**: ecosystem.config.js with:
+```javascript
+env_file: '.env.production',  // PM2 loads this automatically
+```
+
+This is the PROPER way to manage environment variables with PM2. PM2 will:
+1. Read .env.production file
+2. Parse all KEY=VALUE pairs
+3. Pass them to the child process as environment variables
+4. Start Next.js with full environment access
+
+**On VPS**: Replace PM2 app with ecosystem config:
+```bash
+cd /home/iaezap
+git pull
+pm2 delete iaezap  # Remove old app
+pm2 start ecosystem.config.js  # Start with new config
+pm2 save
+```
+
 ### Status
-🔄 IN PROGRESS - Need different approach to environment variable passing
+✅ SOLUTION IMPLEMENTED - Using PM2 ecosystem.config.js with env_file
+
+---
+
+## Final Deployment Instructions
+
+On VPS to deploy the solution:
+```bash
+cd /home/iaezap
+git pull
+npm run build
+pm2 delete iaezap  # Remove old PM2 process
+pm2 start ecosystem.config.js  # Start using ecosystem config
+pm2 save
+pm2 logs iaezap --lines 30  # Verify env loading
+```
+
+Then test webhook again to see if RLS error is gone.
