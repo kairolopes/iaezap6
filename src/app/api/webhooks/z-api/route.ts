@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateWebhookEvent, type WebhookEvent } from '@/types/z-api';
+import { processZApiWebhook } from '@/lib/z-api-processor';
 
 /**
  * Z-API Webhook Request validation schema
@@ -298,8 +299,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<WebhookRe
       timestamp,
     });
 
+    // Process webhook asynchronously (fire-and-forget)
+    if (identifiers.tenantId) {
+      processZApiWebhook(validatedEvent, identifiers.tenantId)
+        .catch(err => console.error('[Webhook Processing Error]', err));
+    }
+
     // Return 200 immediately to prevent Z-API timeout
-    // Message processing should happen asynchronously via a queue
+    // Message processing happens asynchronously in background
     return NextResponse.json(
       {
         success: true,
