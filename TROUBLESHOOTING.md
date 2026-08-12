@@ -230,5 +230,46 @@ Then sync on VPS:
 git fetch origin main && git reset --hard origin/main
 ```
 
+### Implementation Result
+✅ **FIXED** - Commits pushed to GitHub and start.sh file synced to VPS
+- File now exists: ✅ `/home/iaezap/start.sh` (211 bytes)
+- Build successful: ✅
+- PM2 restarted: ✅
+
 ### Status
-🔄 IN PROGRESS - Need to push local commits to GitHub
+✅ FIXED - File synced and process restarted
+
+---
+
+## Problem 8: RLS Permission Still Denied Even with start.sh
+**Date**: 2026-08-12
+**Severity**: CRITICAL
+**Error**: `permission denied for table conversations` in processor even after start.sh deployed
+
+### Current Symptoms
+1. ✅ Webhook endpoint works (returns 200 success)
+2. ✅ start.sh file deployed and PM2 running
+3. ✅ Processor is being called (fire-and-forget)
+4. ❌ Still getting RLS permission error
+5. ❌ No data in Supabase
+
+### Root Cause Analysis
+The bash script is deployed, but environment variables may still not be loading correctly. Possible issues:
+1. `.env.production` file exists but bash script not reading it properly
+2. `export $(cat ...)` syntax might have issues with special characters in values
+3. SERVICE_ROLE_KEY not being passed to child process
+
+### Solution (Verification)
+Check if environment variables are actually being loaded:
+1. Verify `.env.production` file exists on VPS:
+   ```bash
+   cat /home/iaezap/.env.production | head -5
+   ```
+2. Test if start.sh is loading vars by checking the running process:
+   ```bash
+   ps aux | grep next | grep -v grep && env | grep SUPABASE_SERVICE_ROLE_KEY
+   ```
+3. Check if the exact error point in logs to understand where it fails
+
+### Status
+🔄 IN PROGRESS - Investigating why env vars not loading from start.sh
