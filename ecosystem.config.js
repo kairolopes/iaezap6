@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'iaezap',
-      script: './server.js',
+      script: './start-production.sh',
       instances: 1,
       exec_mode: 'fork',
       env: {

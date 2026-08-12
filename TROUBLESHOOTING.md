@@ -946,3 +946,50 @@ pm2 logs iaezap --lines 80 --nostream | grep -A 8 "Z-API Processor Error"
 ```
 
 This will show what's actually failing in the processor now.
+
+---
+
+## **CRITICAL DISCOVERY: STUCK IN RLS LOOP**
+
+Full error shows SAME RLS error:
+```
+error: 'Failed to query conversation: permission denied for table conversations'
+```
+
+**ANALYSIS**: We've tried 10+ different approaches to load environment variables:
+1. ✅ start.sh with bash export 
+2. ❌ start-env.js with spawn
+3. ❌ PM2 ecosystem.config.js with env_file
+4. ✅ server.js with dotenv LOADED
+5. ❌ But Next.js child process STILL doesn't have variables
+
+**THE ROOT PROBLEM**: 
+- Parent process (server.js) loads env vars ✅
+- But child process (next start via spawn) doesn't inherit them ❌
+- Even with `env: process.env` passed to spawn
+
+**WHY THIS HAPPENS**:
+The compiled Next.js server code (in .next/server chunks) may be initializing the Supabase client BEFORE the environment variables are actually in scope within the child process.
+
+**FINAL SOLUTION: USE BASH WRAPPER ONLY**
+
+Don't use Node.js at all for loading env vars. Use pure bash:
+
+Create `start-production.sh`:
+```bash
+#!/bin/bash
+set -a
+source .env.production
+set +a
+exec node_modules/.bin/next start
+```
+
+Then in ecosystem.config.js:
+```javascript
+script: './start-production.sh',
+```
+
+This is the ONLY approach that guarantees env vars are available before ANY Node.js code runs.
+
+### Status
+🔴 REPEATING RLS ERROR - Need bash-only solution
