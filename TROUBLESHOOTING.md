@@ -1110,3 +1110,31 @@ Expected: Conversation + messages should be saved from the webhook event.
 
 ### Status
 ✅ PROCESSOR RUNNING SUCCESSFULLY - Awaiting database verification
+
+---
+
+## Problem 18: Cannot Access Supabase Database from VPS via psql
+**Date**: 2026-08-12
+**Severity**: LOW
+**Error**: `psql: error: could not translate host name "db.nnivicvnhzwucmbvakjh.supabase.co" to address: Name or service not known`
+
+### Root Cause
+VPS cannot resolve Supabase hostname (DNS resolution failure). This is normal - the VPS may:
+1. Not have internet access to external databases
+2. Have firewall rules blocking Supabase access
+3. Or DNS resolver not configured
+
+### Solution
+Skip psql verification. Instead use **Supabase Web Dashboard**:
+1. Go to https://supabase.com/dashboard
+2. Open your project
+3. Go to **SQL Editor** or **Table Editor**
+4. Check if new conversations/messages exist for tenant `6e18da71-4ca4-41f7-90c6-318d79f6637b`
+
+This is the easiest way to verify data persistence.
+
+### Verification Method
+✅ Use Supabase Web Dashboard instead of VPS psql
+
+### Status
+🔄 AWAITING - User to check Supabase dashboard
