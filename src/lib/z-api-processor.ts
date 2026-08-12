@@ -134,6 +134,7 @@ async function handleReceiveEvent(
     });
 
     // Step 1: Check if conversation exists
+    appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] STEP 1: Checking conversation\n`);
     const { data: existingConversation, error: selectError } = await supabase
       .from('conversations')
       .select('id')
@@ -143,12 +144,16 @@ async function handleReceiveEvent(
 
     if (selectError && selectError.code !== 'PGRST116') {
       // PGRST116 = no rows returned, which is expected for new conversations
+      appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] ERROR at STEP 1: ${selectError.message}\n`);
       throw new Error(`Failed to query conversation: ${selectError.message}`);
     }
+
+    appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] STEP 1 OK: conversation exists = ${!!existingConversation}\n`);
 
     let conversationId: string;
 
     // Step 2: Create conversation if it doesn't exist
+    appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] STEP 2: Creating/fetching conversation\n`);
     if (!existingConversation) {
       const { data: newConversation, error: insertError } = await supabase
         .from('conversations')
@@ -165,19 +170,24 @@ async function handleReceiveEvent(
         .single();
 
       if (insertError) {
+        appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] ERROR at STEP 2 INSERT: ${insertError.message}\n`);
         throw new Error(`Failed to create conversation: ${insertError.message}`);
       }
 
       if (!newConversation) {
+        appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] ERROR at STEP 2: No conversation returned\n`);
         throw new Error('No conversation returned after insert');
       }
 
+      appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] STEP 2 OK: Created conversation ${newConversation.id}\n`);
       conversationId = newConversation.id;
     } else {
+      appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] STEP 2 OK: Using existing conversation ${existingConversation.id}\n`);
       conversationId = existingConversation.id;
     }
 
     // Step 3: Insert the inbound message
+    appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] STEP 3: Inserting message\n`);
     const { data: newMessage, error: messageError } = await supabase
       .from('messages')
       .insert([
@@ -195,13 +205,16 @@ async function handleReceiveEvent(
       .single();
 
     if (messageError) {
+      appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] ERROR at STEP 3 INSERT: ${messageError.message}\n`);
       throw new Error(`Failed to insert message: ${messageError.message}`);
     }
 
     if (!newMessage) {
+      appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] ERROR at STEP 3: No message returned\n`);
       throw new Error('No message returned after insert');
     }
 
+    appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] STEP 3 OK: Created message ${newMessage.id}\n`);
     const messageId = newMessage.id;
 
     // Step 4: Fetch full conversation object for rule processing
@@ -240,6 +253,8 @@ async function handleReceiveEvent(
         });
       }
     }
+
+    appendFileSync('/tmp/iaezap-webhook.log', `[${new Date().toISOString()}] handleReceiveEvent SUCCESS: conversationId=${conversationId}, messageId=${messageId}\n`);
 
     return {
       success: true,
