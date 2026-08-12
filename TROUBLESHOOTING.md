@@ -561,3 +561,35 @@ Now that the server is running with proper env vars:
 2. 🔄 Verify webhook processor is running (check logs for [handleReceiveEvent])
 3. 🔄 Verify data is being saved to Supabase (check conversations and messages tables)
 4. 🔄 Test end-to-end: Send WhatsApp message → Webhook → Processor → Database
+
+---
+
+## Problem 12: Invalid Webhook Event ID Format
+**Date**: 2026-08-12
+**Severity**: LOW
+**Error**: `Invalid webhook event ID` during validation
+
+### Root Cause
+The webhook validation schema expects a specific format for the `id` field. Test value `"test-event-001"` doesn't match the schema (likely expects UUID format).
+
+### Solution
+Use UUID format for the event ID:
+```bash
+curl -s -X POST "https://iaezap.com.br/api/webhooks/z-api?tenantId=6e18da71-4ca4-41f7-90c6-318d79f6637b&instanceId=3ecd22ed-86fe-925d-a777-24427ef70706" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": {
+      "type": "receive",
+      "messageId": "550e8400-e29b-41d4-a716-446655441001",
+      "senderPhone": "5511987654321",
+      "messageType": "text",
+      "text": "✅ Webhook Test - Data should be saved!",
+      "timestamp": 1723493857,
+      "id": "550e8400-e29b-41d4-a716-446655441002",
+      "phone": "5511999999999"
+    }
+  }'
+```
+
+### Status
+🔄 IN PROGRESS - Testing with valid UUID format
