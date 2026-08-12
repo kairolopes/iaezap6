@@ -457,5 +457,68 @@ app.prepare().then(() => {
 });
 ```
 
+### Deployment Result
+❌ **FAILED** - `TypeError: next is not a function` at line 49
+- Environment IS loaded correctly
+- But Next.js API call is incorrect
+- `require('next')` doesn't return a callable function
+
 ### Status
-🔄 IN PROGRESS - Fixing Next.js initialization
+❌ FAILED - Next.js API invocation incorrect
+
+---
+
+## Problem 11: Incorrect Next.js API Usage in start-env.js
+**Date**: 2026-08-12
+**Severity**: CRITICAL
+**Error**: `TypeError: next is not a function` at start-env.js:49
+
+### Root Cause
+The code `const { default: next } = require('next');` doesn't return a function. The Next.js 16.3.0 module structure is different from what was assumed.
+
+### Solution (Simplest Approach)
+Use `child_process.exec()` to run `next start` in the same process with inherited environment:
+
+```javascript
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+
+// Load .env.production
+const envPath = path.join(__dirname, '.env.production');
+const env = { ...process.env };
+
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  envContent.split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const [key, ...valueParts] = trimmed.split('=');
+      if (key) {
+        const value = valueParts.join('=').trim();
+        if (value) {
+          env[key.trim()] = value;
+          if (key.includes('SERVICE_ROLE')) {
+            console.log(`[Env] Loaded ${key.substring(0, 20)}...`);
+          }
+        }
+      }
+    }
+  });
+  console.log('[Env Loader] Environment variables loaded');
+}
+
+// Spawn next start with full environment
+const nextStart = spawn('node_modules/.bin/next', ['start'], {
+  stdio: 'inherit',
+  env,
+  cwd: __dirname,
+});
+
+process.on('SIGTERM', () => nextStart.kill('SIGTERM'));
+process.on('SIGINT', () => nextStart.kill('SIGINT'));
+```
+
+### Status
+🔄 IN PROGRESS - Using spawn with explicit env passing

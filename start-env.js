@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-const { createServer } = require('http');
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 
-// Load .env.production BEFORE importing Next.js
+// Load .env.production
 const envPath = path.join(__dirname, '.env.production');
+const env = { ...process.env };
+
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf-8');
   envContent.split('\n').forEach(line => {
@@ -14,35 +16,44 @@ if (fs.existsSync(envPath)) {
       if (key) {
         const value = valueParts.join('=').trim();
         if (value) {
-          process.env[key.trim()] = value;
-          // Debug: log SERVICE_ROLE_KEY if loading
+          env[key.trim()] = value;
           if (key.includes('SERVICE_ROLE')) {
-            console.log(`[Env Loaded] ${key.substring(0, 20)}... = ${value.substring(0, 20)}...`);
+            console.log(`[Env] Loaded ${key.substring(0, 20)}...`);
           }
         }
       }
     }
   });
-  console.log('[Env Loader] Successfully loaded .env.production');
+  console.log('[Env Loader] Environment variables loaded from .env.production');
 } else {
-  console.warn('[Env Loader] .env.production not found');
+  console.warn('[Env Loader] WARNING: .env.production not found');
 }
 
-// Ensure NODE_ENV is set to production
-if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV = 'production';
-}
+// Ensure NODE_ENV is production
+env.NODE_ENV = 'production';
 
-// NOW import and start Next.js
-const { default: next } = require('next');
-const app = next({ dev: false, dir: __dirname });
-const handle = app.getRequestHandler();
+// Spawn next start with full environment inheritance
+const nextStart = spawn('node_modules/.bin/next', ['start'], {
+  stdio: 'inherit',
+  env,
+  cwd: __dirname,
+});
 
-app.prepare().then(() => {
-  createServer((req, res) => handle(req, res)).listen(3000, '0.0.0.0', () => {
-    console.log('[Server] Next.js started on port 3000');
-  });
-}).catch(err => {
-  console.error('[Server Error]', err);
-  process.exit(1);
+// Handle process signals
+process.on('SIGTERM', () => {
+  console.log('[Process] Received SIGTERM, shutting down...');
+  nextStart.kill('SIGTERM');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('[Process] Received SIGINT, shutting down...');
+  nextStart.kill('SIGINT');
+  process.exit(0);
+});
+
+// Handle child process exit
+nextStart.on('exit', (code, signal) => {
+  console.log(`[Process] Next.js exited with code ${code} and signal ${signal}`);
+  process.exit(code || 1);
 });
