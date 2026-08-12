@@ -128,5 +128,59 @@ Check VPS logs:
 pm2 logs iaezap --lines 200 | grep -i "processor\|handleReceive\|webhook"
 ```
 
+### Investigation Result
+🔴 **FOUND ERROR**: `permission denied for table conversations`
+- Processor IS running ✅
+- But still hitting RLS permission error ❌
+- This means SUPABASE_SERVICE_ROLE_KEY is NOT being passed to the child process
+
 ### Status
-🔄 IN PROGRESS - Investigating processor execution
+❌ FAILED - start.js not properly passing env vars to child process
+
+---
+
+## Problem 6: start.js Not Passing Environment Variables to Child Process
+**Date**: 2026-08-12
+**Severity**: CRITICAL
+**Error**: `permission denied for table conversations` in processor despite start.js fix
+
+### Root Cause
+The start.js script loads env vars into `process.env`, but when spawning the child process:
+```javascript
+const nextStart = spawn('node', [...], { env, stdio: 'inherit', cwd: __dirname });
+```
+
+The `env` object passed to spawn() is NOT merged with system environment variables. It REPLACES them entirely. This causes:
+1. Custom vars from .env.production are loaded ✅
+2. But critical PATH and other system vars are missing ❌
+3. Child process runs with incomplete environment
+
+### Solution
+Must merge env vars properly:
+```javascript
+const env = { ...process.env };  // Copy existing env
+// Then add .env.production vars on top
+```
+
+Already implemented in current start.js, but need to verify it's working.
+
+### Alternative Solution (Simpler)
+Instead of Node.js env loading, use shell to source the file:
+```bash
+#!/bin/bash
+export $(cat /home/iaezap/.env.production | grep -v '^#' | xargs)
+exec node /usr/local/bin/next start
+```
+
+### Implementation
+Option A (Fix current start.js): Verify env merging is working
+Option B (Use shell script): Replace start.js with bash wrapper
+
+### Testing
+Check if SERVICE_ROLE_KEY is loaded:
+```bash
+node -e "require('./start.js'); setTimeout(() => console.log(process.env.SUPABASE_SERVICE_ROLE_KEY), 100)"
+```
+
+### Status
+🔄 IN PROGRESS - Need to verify/fix env var passing mechanism
