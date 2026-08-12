@@ -361,5 +361,38 @@ if (fs.existsSync(envPath)) {
 require('next/dist/bin/next')(['start']);
 ```
 
+### Implementation
+✅ **Created and pushed**:
+- start-env.js: Node.js wrapper that loads .env.production before starting Next.js
+- Updated start.sh: Now calls `node start-env.js` instead of bash env loading
+- Documentation updated to remove secrets
+
 ### Status
-🔄 IN PROGRESS - Creating Node.js wrapper to load env vars properly
+✅ IMPLEMENTED - Ready to deploy on VPS
+
+---
+
+## Problem 9: Git Merge Conflict on VPS - start.sh Modified Locally
+**Date**: 2026-08-12
+**Severity**: MEDIUM
+**Error**: `error: Your local changes to the following files would be overwritten by merge: start.sh`
+
+### Root Cause
+The VPS has local changes to start.sh that conflict with the new version being pulled from GitHub. This happened because:
+1. start.sh was previously edited on VPS
+2. New version exists in GitHub with different content
+3. `git pull` tries to merge but fails due to conflict
+
+### Solution
+Force git to discard local changes and use GitHub version:
+```bash
+cd /home/iaezap && git fetch origin main && git reset --hard origin/main
+```
+
+Then rebuild and restart:
+```bash
+npm run build && pm2 restart iaezap
+```
+
+### Status
+🔄 IN PROGRESS - Resolving merge conflict with force reset
