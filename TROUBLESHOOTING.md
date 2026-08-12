@@ -1221,3 +1221,50 @@ Need to check the RLS policies in Supabase:
 
 ### Status
 🔄 NEED TO VERIFY - RLS policy configuration in Supabase dashboard
+
+---
+
+## Problem 21: SERVICE_ROLE Missing Table Permissions
+**Date**: 2026-08-12
+**Severity**: CRITICAL
+**Error**: `permission denied for table conversations` with hint: `Grant the required privileges to the current role with: GRANT SELECT ON public.conversations TO service_role;`
+
+### Root Cause FOUND! 🎯
+**The service_role role does NOT have SELECT/INSERT/UPDATE/DELETE permissions on the conversations and messages tables!**
+
+### Proof
+Direct API test:
+```bash
+curl -s "https://gqromcfhiosfppqlottz.supabase.co/rest/v1/conversations?select=*&limit=5" \
+  -H "apikey: [SERVICE_ROLE_KEY]"
+
+Response:
+{
+  "code":"42501",
+  "message":"permission denied for table conversations",
+  "hint":"Grant the required privileges to the current role with: GRANT SELECT ON public.conversations TO service_role;"
+}
+```
+
+### Solution
+Run these SQL commands in Supabase SQL Editor to grant permissions:
+
+```sql
+-- Grant permissions on conversations table
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.conversations TO service_role;
+
+-- Grant permissions on messages table
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.messages TO service_role;
+
+-- Grant usage on sequences if any
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;
+```
+
+### Implementation
+1. Go to Supabase Dashboard → SQL Editor
+2. Copy and paste the SQL commands above
+3. Execute
+4. Test webhook again
+
+### Status
+🔄 AWAITING SQL EXECUTION - This will fix the permission denied errors
