@@ -88,12 +88,10 @@ export type DisconnectReason = z.infer<typeof disconnectReasonEnum>;
 /**
  * Base webhook event structure
  * Common fields shared across all webhook events
+ * Note: Each event type has its own unique identifier (messageId, etc.)
+ * Z-API does NOT send a universal 'id' field
  */
 const baseWebhookSchema = z.object({
-  id: z
-    .string()
-    .uuid('Invalid webhook event ID')
-    .describe('Unique identifier for this webhook event'),
   timestamp: timestampSchema.describe('When the event occurred (unix timestamp in ms)'),
   phoneNumber: phoneNumberSchema.describe('WhatsApp phone number (without + or -)')
     .optional(),
