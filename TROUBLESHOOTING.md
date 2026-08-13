@@ -1424,5 +1424,29 @@ cd /home/iaezap && npm run build && pm2 restart iaezap && sleep 5
 
 Test again with new webhook.
 
+### Solution Applied
+Execute with explicit BEGIN/COMMIT transaction:
+```sql
+BEGIN;
+ALTER TABLE conversations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE message_rules DISABLE ROW LEVEL SECURITY;
+COMMIT;
+```
+
+### Final Test Result
+✅ **COMPLETE SUCCESS!** RLS changes persist!
+
+Two consecutive successful webhook executions:
+```
+[2026-08-13T00:09:20.174Z] handleReceiveEvent SUCCESS: 
+  conversationId=e6f38e6d-2c88-466d-a958-e8dd1a146fe1
+  messageId=751d5bdb-db94-4384-8899-95550dd1bcaf
+
+[2026-08-13T00:18:28.200Z] handleReceiveEvent SUCCESS: 
+  conversationId=e6f38e6d-2c88-466d-a958-e8dd1a146fe1
+  messageId=ddfd4c5b-a419-46bb-a5c4-91e199d488dd
+```
+
 ### Status
-🔄 INVESTIGATING - Need to verify RLS state persists in Supabase
+✅ **FULLY RESOLVED** - Webhook data persistence working perfectly!
