@@ -1509,3 +1509,33 @@ Two consecutive successful webhook executions:
 
 ### Status
 ✅ **FULLY RESOLVED** - Webhook data persistence working perfectly!
+
+---
+
+## 📊 Z-API INTEGRATION STATUS
+
+### Configuração
+- ✅ **Webhook URL:** `https://iaezap.com.br/api/webhooks/z-api`
+- ✅ **Webhook Ativado:** Sim (toggle OFF = ativo)
+- ✅ **TenantId:** `6e18da71-4ca4-41f7-90c6-318d79f6637b`
+- ✅ **InstanceId:** `3ecd22ed-86fe-925d-a777-24427ef70706`
+
+### Status Z-API
+- ✅ **Instância:** Online
+- ✅ **Número Conectado:** Sim (conectado)
+- ✅ **Sessão:** Ativa (não expirou)
+- ✅ **WhatsApp:** Conectado e funcionando
+
+### Problema Atual
+⚠️ **Webhook não está sendo recebido quando mensagem é enviada**
+
+Mesmo com tudo configurado corretamente, quando usuário envia mensagem:
+- ❌ Z-API NÃO está enviando webhook para iaezap.com.br
+- ❌ Nenhuma nova mensagem aparece no Supabase
+- ❌ Logs da VPS não mostram novo webhook
+
+### Próximos Passos de Investigação
+1. Testar webhook manualmente da Z-API
+2. Verificar logs de webhook na Z-API
+3. Comparar estrutura de webhook recebida vs esperada
+4. Verificar firewall/DNS entre Z-API e iaezap.com.br
