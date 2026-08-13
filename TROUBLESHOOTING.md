@@ -1302,3 +1302,42 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;
 ```
 
 **Result**: Webhook now processes and saves data successfully! ✅
+
+---
+
+## Problem 22: Permissions Lost After PM2 Restart
+**Date**: 2026-08-13
+**Severity**: CRITICAL
+**Issue**: After granting permissions and restarting PM2, "permission denied for table conversations" error returns
+
+### Investigation
+After executing SQL to grant permissions:
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.conversations TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.messages TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.message_rules TO service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;
+```
+
+First webhook test showed SUCCESS. But after PM2 restart, permissions were lost.
+
+### Possible Causes
+1. Permissions were granted only for current session, not permanently
+2. Supabase RLS policies reverting permissions
+3. Need to disable RLS entirely for service role to bypass
+
+### Solution
+Try this SQL instead (disable RLS for service_role):
+
+```sql
+ALTER TABLE conversations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE message_rules DISABLE ROW LEVEL SECURITY;
+```
+
+This completely disables RLS on these tables so service_role can access without checking policies.
+
+Execute in Supabase SQL Editor and test webhook again.
+
+### Status
+🔄 AWAITING - Trying RLS disable approach
