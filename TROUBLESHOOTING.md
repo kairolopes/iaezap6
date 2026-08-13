@@ -2450,5 +2450,24 @@ id: z
 2. Test webhook again with Z-API payload (which doesn't include `id`)
 3. Verify that validation passes
 
+### Implementation Result
+✅ **WEBHOOK FULLY FUNCTIONAL!**
+
+Test with corrected schema:
+```bash
+curl -X POST "https://iaezap.com.br/api/webhooks/z-api/instances/3ECD22ED86FE925D5A7772442EF70706/token/9D350B8542F495AC919995C1" \
+  -H "Content-Type: application/json" \
+  -d '{"event":{"type":"receive","timestamp":1723492800000,"messageId":"m-test-001","senderPhone":"5562991234567","messageType":"text","text":"Teste sem ID"}}'
+```
+
+Response: `{"success":true,"message":"Received"...}`
+
+**Root cause identified and fixed:**
+- Z-API webhook payloads do NOT include a universal `id` field
+- Each event type has its own identifier: `messageId` (receive), `messageId` (delivery), etc.
+- The `baseWebhookSchema` was requiring a non-existent `id` field
+- Solution: Removed `id` completely from `baseWebhookSchema`
+- Result: Webhooks now validate and process successfully ✅
+
 ### Status
-✅ FIXED - Schema modified to accept webhooks without `id` field
+✅ **FULLY RESOLVED** - Webhook endpoint ready for production Z-API messages
