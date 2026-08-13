@@ -38,14 +38,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (payload.status === 'RECEIVED') {
       console.log('[Webhook Receive] Mapping Z-API payload to receive event');
       // This is a received message event from Z-API
+      // Extract message text from nested object if needed
+      let messageText = '';
+      if (typeof payload.text === 'string') {
+        messageText = payload.text;
+      } else if (payload.text?.message) {
+        messageText = payload.text.message;
+      } else if (typeof payload.body === 'string') {
+        messageText = payload.body;
+      }
+
       event = {
         type: 'receive',
         timestamp: payload.momment || Date.now(),
         messageId: payload.messageId,
         senderPhone: payload.phone,
         senderName: payload.senderName,
-        messageType: 'text', // Default to text, can be enhanced
-        text: payload.text || payload.body || '',
+        messageType: 'text',
+        text: messageText,
         phone: payload.connectedPhone,
         id: payload.instanceId,
       };
