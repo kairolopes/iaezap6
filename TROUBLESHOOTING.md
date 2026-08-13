@@ -1385,3 +1385,44 @@ The core issue was **Supabase Row-Level Security (RLS) blocking service_role acc
 - RLS policies were the actual blocker
 - Disabling RLS is simpler than managing granular permissions for service_role
 - Fire-and-forget webhook pattern requires explicit logging to verify success
+
+---
+
+## Problem 23: RLS Disable Changes Not Persisting
+**Date**: 2026-08-13
+**Severity**: CRITICAL
+**Issue**: After disabling RLS with `ALTER TABLE ... DISABLE ROW LEVEL SECURITY`, changes are not persisting across restarts
+
+### Symptoms
+1. Execute SQL: `ALTER TABLE conversations DISABLE ROW LEVEL SECURITY;`
+2. Test webhook: SUCCESS ✅
+3. Rebuild and restart PM2: Still getting "permission denied" ❌
+4. Same error: `permission denied for table conversations`
+
+### Root Cause
+Unclear - possible causes:
+1. Supabase RLS changes need session commit (transaction not committed?)
+2. Next.js caching old Supabase client state
+3. RLS being re-enabled automatically by Supabase
+4. Multiple Next.js processes with different RLS states
+
+### Solution (Try This)
+Execute SQL with explicit transaction:
+
+```sql
+BEGIN;
+ALTER TABLE conversations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE message_rules DISABLE ROW LEVEL SECURITY;
+COMMIT;
+```
+
+Then on VPS:
+```bash
+cd /home/iaezap && npm run build && pm2 restart iaezap && sleep 5
+```
+
+Test again with new webhook.
+
+### Status
+🔄 INVESTIGATING - Need to verify RLS state persists in Supabase
