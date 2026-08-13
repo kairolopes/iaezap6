@@ -26,7 +26,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     console.log('[Webhook Receive] Request body:', JSON.stringify(body).substring(0, 500));
 
     // Extract event from body
-    const event = (body as any)?.event || body;
+    let event = (body as any)?.event || body;
+
+    // Map Z-API payload to our schema
+    // Z-API sends raw webhook data, not wrapped in {event}
+    // Determine type based on status field
+    const payload = event as any;
+
+    if (payload.status === 'RECEIVED' && !payload.type) {
+      // This is a received message event from Z-API
+      event = {
+        type: 'receive',
+        timestamp: payload.momment || Date.now(),
+        messageId: payload.messageId,
+        senderPhone: payload.phone,
+        senderName: payload.senderName,
+        messageType: 'text', // Default to text, can be enhanced
+        text: payload.text || payload.body || '',
+        phone: payload.connectedPhone,
+        id: payload.instanceId,
+      };
+    }
 
     // Validate webhook event payload
     const eventValidation = validateWebhookEvent(event);
