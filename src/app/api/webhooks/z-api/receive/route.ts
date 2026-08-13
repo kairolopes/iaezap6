@@ -33,7 +33,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Determine type based on status field
     const payload = event as any;
 
+    console.log('[Webhook Receive] Payload status:', payload.status, 'Has type:', !!payload.type);
+
     if (payload.status === 'RECEIVED' && !payload.type) {
+      console.log('[Webhook Receive] Mapping Z-API payload to receive event');
       // This is a received message event from Z-API
       event = {
         type: 'receive',
@@ -46,6 +49,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         phone: payload.connectedPhone,
         id: payload.instanceId,
       };
+      console.log('[Webhook Receive] Mapped event:', JSON.stringify(event).substring(0, 300));
+    } else {
+      console.log('[Webhook Receive] No mapping needed - condition not met');
     }
 
     // Validate webhook event payload
