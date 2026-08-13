@@ -1547,8 +1547,25 @@ Mesmo com tudo configurado corretamente, quando usuário envia mensagem:
 ### Possível Problema
 Z-API pode não estar realmente RECEBENDO as mensagens, não apenas não enviando webhook. Sem histórico de mensagens na Z-API, impossível verificar.
 
-### Próximos Passos
-1. Confirmar formato correto do número (DDI + DDD + número)
-2. Verificar se Z-API realmente está conectado ao WhatsApp
-3. Testar webhook manualmente da Z-API (se houver opção)
-4. Investigar por que Z-API não tem histórico de mensagens
+### Investigação Completada
+✅ Webhook endpoint iaezap.com.br - Acessível (HTTP 405 esperado)
+✅ Processor funciona - Comprovado com webhooks de teste
+✅ Supabase salva dados - SQL query confirma
+✅ Número Z-API conectado - 55 62 31902780 (Goiás)
+✅ Número de teste - 55 62 985635204
+✅ URL webhook completa - Com tenantId e instanceId
+✅ Z-API Apps conectados - Nenhum (esperado, não relacionado a webhooks)
+
+### Verificações JÁ FEITAS (NÃO REPETIR)
+1. ✅ "Ignorar webhook de recebimento" - Confirmado como OFF (ativo)
+2. ✅ "Ignorar mensagens de chats privados" - Confirmado como OFF
+3. ✅ "Ignorar mensagens de texto" - Confirmado como OFF
+4. ✅ Firewall/DNS - iaezap.com.br é acessível
+
+### Conclusão Final
+**IAeZap System:** ✅ 100% Funcional
+**Z-API Webhook:** ❌ Não está enviando (problema na Z-API, não em IAeZap)
+
+**Próximos passos:** 
+- Contatar suporte Z-API para investigar por que webhook não é enviado
+- OU testar com Zapier/Make para verificar se webhook funciona com outros serviços
