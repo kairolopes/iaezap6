@@ -1534,8 +1534,21 @@ Mesmo com tudo configurado corretamente, quando usuário envia mensagem:
 - ❌ Nenhuma nova mensagem aparece no Supabase
 - ❌ Logs da VPS não mostram novo webhook
 
-### Próximos Passos de Investigação
-1. Testar webhook manualmente da Z-API
-2. Verificar logs de webhook na Z-API
-3. Comparar estrutura de webhook recebida vs esperada
-4. Verificar firewall/DNS entre Z-API e iaezap.com.br
+### Investigação Atual
+- ✅ URL webhook atualizada com instanceId completo
+- ✅ iaezap.com.br está acessível (HTTP 405 esperado)
+- ❌ Ainda sem novo webhook recebido após atualização
+- ❌ Z-API não tem histórico de mensagens para verificar recebimento
+
+### Informações do Teste
+- **Número de teste:** 556230912780
+- **Status:** Z-API não mostra histórico de mensagens
+
+### Possível Problema
+Z-API pode não estar realmente RECEBENDO as mensagens, não apenas não enviando webhook. Sem histórico de mensagens na Z-API, impossível verificar.
+
+### Próximos Passos
+1. Confirmar formato correto do número (DDI + DDD + número)
+2. Verificar se Z-API realmente está conectado ao WhatsApp
+3. Testar webhook manualmente da Z-API (se houver opção)
+4. Investigar por que Z-API não tem histórico de mensagens
