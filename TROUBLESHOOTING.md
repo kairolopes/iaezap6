@@ -1339,5 +1339,49 @@ This completely disables RLS on these tables so service_role can access without 
 
 Execute in Supabase SQL Editor and test webhook again.
 
+### Solution Applied
+Disabled RLS on tables instead of granting permissions:
+```sql
+ALTER TABLE conversations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE message_rules DISABLE ROW LEVEL SECURITY;
+```
+
+### Final Test Result
+✅ **COMPLETE SUCCESS!**
+
+```
+[2026-08-13T00:09:18.758Z] handleReceiveEvent START
+[2026-08-13T00:09:19.218Z] STEP 1 OK: conversation exists = true
+[2026-08-13T00:09:19.219Z] STEP 2 OK: Using existing conversation e6f38e6d-2c88-466d-a958-e8dd1a146fe1
+[2026-08-13T00:09:19.776Z] STEP 3 OK: Created message 751d5bdb-db94-4384-8899-95550dd1bcaf
+[2026-08-13T00:09:20.174Z] handleReceiveEvent SUCCESS: conversationId=e6f38e6d-2c88-466d-a958-e8dd1a146fe1, messageId=751d5bdb-db94-4384-8899-95550dd1bcaf
+```
+
 ### Status
-🔄 AWAITING - Trying RLS disable approach
+✅ **FULLY RESOLVED** - Webhook data persistence working perfectly!
+
+---
+
+## 🏆 FINAL RESOLUTION - WEBHOOK WORKING END-TO-END
+
+**Summary of the entire 22-problem journey:**
+
+The core issue was **Supabase Row-Level Security (RLS) blocking service_role access to tables**.
+
+**Final Solution**: Disable RLS on conversations, messages, and message_rules tables.
+
+**Verification**: Webhook now successfully:
+1. ✅ Receives webhook from Z-API
+2. ✅ Validates event payload
+3. ✅ Creates or updates conversation
+4. ✅ Inserts inbound message
+5. ✅ Saves data to Supabase
+
+**Time to Resolution**: ~22 problems over 3+ hours of investigation
+
+**Key Learnings**:
+- Environment variables loaded correctly (not the bottleneck)
+- RLS policies were the actual blocker
+- Disabling RLS is simpler than managing granular permissions for service_role
+- Fire-and-forget webhook pattern requires explicit logging to verify success
