@@ -33,9 +33,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Determine type based on status field
     const payload = event as any;
 
-    console.log('[Webhook Receive] Payload status:', payload.status, 'Has type:', !!payload.type);
+    console.log('[Webhook Receive] Payload status:', payload.status, 'Has type:', !!payload.type, 'Type value:', payload.type);
 
-    if (payload.status === 'RECEIVED' && !payload.type) {
+    if (payload.status === 'RECEIVED') {
       console.log('[Webhook Receive] Mapping Z-API payload to receive event');
       // This is a received message event from Z-API
       event = {
