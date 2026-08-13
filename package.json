@@ -6,11 +6,26 @@
     "dev": "next dev",
     "build": "next build",
     "start": "bash start.sh",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:multi-tenant": "jest tests/multi-tenant.test.ts --verbose",
+    "test:e2e": "jest tests/end-to-end.test.ts --verbose",
+    "test:e2e:watch": "jest tests/end-to-end.test.ts --watch",
+    "test:e2e:coverage": "jest tests/end-to-end.test.ts --coverage",
+    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
+    "test:cleanup": "ts-node tests/database-cleanup.ts",
+    "verify:setup": "bash tests/verify-setup.sh",
+    "generate-jwt-keys": "node scripts/generate-jwt-keys.js",
+    "backfill:complete": "node scripts/complete_backfill.js",
+    "backfill:schema": "node scripts/schema_builder.js",
+    "migration:execute": "node execute-migration.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
     "@types/jsonwebtoken": "^9.0.10",
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "jsonwebtoken": "^9.0.3",
     "next": "16.3.0",
@@ -19,13 +34,19 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/react": "^16",
     "@types/bcrypt": "^6.0.0",
+    "@types/jest": "^29.5.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
+    "jest": "^29.5.0",
+    "jest-environment-node": "^29.5.0",
+    "pg": "^8.23.0",
     "tailwindcss": "^4",
+    "ts-jest": "^29.1.0",
     "typescript": "^5"
   }
 }

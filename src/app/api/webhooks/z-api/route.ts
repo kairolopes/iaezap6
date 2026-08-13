@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateWebhookEvent, type WebhookEvent } from '@/types/z-api';
 import { processZApiWebhook } from '@/lib/z-api-processor';
+import {
+  resolveWebhookContext,
+  validateWebhookOrigin,
+  logWebhookProcessing,
+} from '@/lib/webhook-integration';
 
 /**
  * Z-API Webhook Request validation schema
@@ -117,8 +122,8 @@ async function validateOwnership(
     };
   }
 
-  // Validate UUID format if provided
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  // Validate UUID format if provided (accepts with or without hyphens)
+  const uuidRegex = /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i;
 
   if (tenantId && !uuidRegex.test(tenantId)) {
     return {
@@ -301,9 +306,77 @@ export async function POST(request: NextRequest): Promise<NextResponse<WebhookRe
 
     // Process webhook asynchronously (fire-and-forget)
     if (identifiers.tenantId) {
-      processZApiWebhook(validatedEvent, identifiers.tenantId)
-        .then(result => console.log('[Webhook Processed Successfully]', result))
-        .catch(err => console.error('[Webhook Processing Error]', err));
+      // Non-blocking async operations
+      (async () => {
+        try {
+          // Validate webhook origin
+          const originValidation = await validateWebhookOrigin(
+            identifiers.tenantId!,
+            identifiers.instanceId
+          );
+
+          if (!originValidation.valid) {
+            console.warn('[Webhook Origin Validation Failed]', originValidation);
+            await logWebhookProcessing(
+              identifiers.tenantId!,
+              undefined,
+              validatedEvent.type,
+              'failed',
+              { reason: originValidation.error }
+            );
+            return;
+          }
+
+          // Resolve tenant to company context
+          const context = await resolveWebhookContext(
+            identifiers.tenantId!,
+            identifiers.instanceId
+          );
+
+          // Log webhook reception
+          await logWebhookProcessing(
+            identifiers.tenantId!,
+            context.companyId,
+            validatedEvent.type,
+            'received',
+            { resolved: context.resolved, usesCompanyId: context.usesCompanyId }
+          );
+
+          // Process webhook with company context if available
+          const result = await processZApiWebhook(
+            validatedEvent,
+            identifiers.tenantId!,
+            context.companyId
+          );
+
+          // Log processing result
+          await logWebhookProcessing(
+            identifiers.tenantId!,
+            context.companyId,
+            validatedEvent.type,
+            result.success ? 'success' : 'failed',
+            result
+          );
+
+          console.log('[Webhook Processed Successfully]', {
+            result,
+            contextResolved: context.resolved,
+            usesCompanyId: context.usesCompanyId,
+          });
+        } catch (err) {
+          console.error('[Webhook Processing Error]', {
+            error: err instanceof Error ? err.message : 'Unknown error',
+            stack: err instanceof Error ? err.stack : undefined,
+          });
+          await logWebhookProcessing(
+            identifiers.tenantId!,
+            undefined,
+            validatedEvent.type,
+            'failed',
+            { error: err instanceof Error ? err.message : 'Unknown error' }
+          );
+        }
+      })();
     }
 
     // Return 200 immediately to prevent Z-API timeout

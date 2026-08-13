@@ -1,0 +1,42 @@
+{
+  "timestamp": "2026-08-13T17:38:25.151Z",
+  "database": "https://gqromcfhiosfppqlottz.supabase.co",
+  "checks": [
+    {
+      "name": "Companies table count",
+      "expected": "1+",
+      "actual": 0,
+      "passed": false
+    },
+    {
+      "name": "Users table count",
+      "expected": "1+",
+      "actual": 0,
+      "passed": false
+    },
+    {
+      "name": "Public tables count",
+      "expected": "5+",
+      "actual": 4,
+      "passed": false,
+      "tables": [
+        "companies",
+        "users",
+        "company_members",
+        "z_api_instances"
+      ]
+    },
+    {
+      "name": "RLS Policies count",
+      "status": "REQUIRES_DIRECT_SQL",
+      "expected": "13+",
+      "message": "Query pg_policies table via direct PostgreSQL connection"
+    },
+    {
+      "name": "Custom indexes count",
+      "status": "REQUIRES_DIRECT_SQL",
+      "expected": "25+",
+      "message": "Query pg_indexes table via direct PostgreSQL connection"
+    }
+  ]
+}

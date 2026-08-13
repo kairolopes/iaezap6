@@ -1,6 +1,149 @@
 import { z } from 'zod';
 
 /**
+ * ===========================
+ * MULTI-TENANT TYPES (Core Domain Models)
+ * ===========================
+ * These interfaces represent the fundamental data structures
+ * for the IAeZap multi-tenant system
+ */
+
+/**
+ * Company type for multi-tenant system
+ * Represents an organization/business using IAeZap
+ */
+export interface Company {
+  id: string; // UUID
+  cnpj: string; // Brazilian CNPJ (14 digits)
+  name: string;
+  createdAt: Date;
+  updatedAt?: Date;
+  isActive?: boolean;
+}
+
+/**
+ * User type for multi-tenant system
+ * Represents a user account associated with a company
+ */
+export interface User {
+  id: string; // UUID
+  email: string;
+  role: UserRole;
+  company_id: string; // UUID - links user to their company
+  created_at: Date;
+  updated_at?: Date;
+  firstName?: string;
+  lastName?: string;
+  isActive?: boolean;
+  lastLoginAt?: Date;
+}
+
+/**
+ * AuthToken type for multi-tenant system
+ * Contains JWT tokens and associated user/company context
+ */
+export interface AuthToken {
+  access_token: string;
+  refresh_token: string;
+  user: User;
+  company_id: string; // Redundant with user.company_id for convenience
+  expiresIn: number; // seconds
+  tokenType: 'Bearer';
+  issuedAt: Date;
+}
+
+/**
+ * LoginResponse type
+ * Returned after successful login
+ */
+export interface LoginResponse {
+  success: true;
+  data: {
+    token: AuthToken;
+    user: User;
+  };
+}
+
+/**
+ * RegisterResponse type
+ * Returned after successful registration
+ */
+export interface RegisterResponse {
+  success: true;
+  data: {
+    user: Omit<User, 'created_at' | 'updated_at'> & {
+      created_at: string; // ISO string
+    };
+    token: AuthToken;
+    company: Company;
+  };
+}
+
+/**
+ * ===========================
+ * VALIDATION SCHEMAS (Zod)
+ * ===========================
+ * These schemas handle runtime validation of input data
+ */
+
+/**
+ * Validation schema for Company
+ */
+export const companySchema = z.object({
+  id: z.string().uuid('Invalid company ID'),
+  cnpj: z
+    .string()
+    .regex(/^\d{14}$/, 'CNPJ must be 14 digits'),
+  name: z
+    .string()
+    .min(3, 'Company name must be at least 3 characters')
+    .max(255, 'Company name must not exceed 255 characters')
+    .trim(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date().optional(),
+  isActive: z.boolean().optional().default(true),
+});
+
+/**
+ * Validation schema for User
+ */
+export const userSchema = z.object({
+  id: z.string().uuid('Invalid user ID'),
+  email: z
+    .string()
+    .email('Invalid email format')
+    .toLowerCase()
+    .trim(),
+  role: z.enum(['admin', 'moderator', 'user']),
+  company_id: z.string().uuid('Invalid company ID'),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  isActive: z.boolean().optional().default(true),
+  lastLoginAt: z.coerce.date().optional(),
+});
+
+/**
+ * Validation schema for AuthToken
+ */
+export const authTokenSchema = z.object({
+  access_token: z
+    .string()
+    .min(1, 'Access token cannot be empty'),
+  refresh_token: z
+    .string()
+    .min(1, 'Refresh token cannot be empty'),
+  user: userSchema,
+  company_id: z.string().uuid('Invalid company ID'),
+  expiresIn: z
+    .number()
+    .positive('Expiration must be positive'),
+  tokenType: z.enum(['Bearer']).default('Bearer'),
+  issuedAt: z.coerce.date(),
+});
+
+/**
  * Validation schema for login requests
  * Ensures email format and password requirements are met
  */
@@ -15,11 +158,13 @@ export const loginRequestSchema = z.object({
     .min(6, 'Password must be at least 6 characters')
     .max(128, 'Password must not exceed 128 characters'),
   rememberMe: z.boolean().optional().default(false),
+  company_id: z.string().uuid('Invalid company ID').optional(),
 });
 
 /**
  * Validation schema for registration requests
- * Includes email, password, and optional profile fields
+ * Includes email, password, company info, and profile fields
+ * Supports both new company creation and joining existing company
  */
 export const registerRequestSchema = z.object({
   email: z
@@ -45,6 +190,16 @@ export const registerRequestSchema = z.object({
     .min(2, 'Last name must be at least 2 characters')
     .max(50, 'Last name must not exceed 50 characters')
     .trim(),
+  // Multi-tenant fields
+  companyName: z
+    .string()
+    .min(3, 'Company name must be at least 3 characters')
+    .max(255, 'Company name must not exceed 255 characters')
+    .trim(),
+  cnpj: z
+    .string()
+    .regex(/^\d{14}$/, 'CNPJ must be 14 digits')
+    .optional(),
   acceptTerms: z
     .boolean()
     .refine((val) => val === true, 'You must accept terms and conditions'),
@@ -84,24 +239,33 @@ export const tokenPayloadSchema = z.object({
 
 /**
  * Validation schema for successful authentication responses
- * Returns tokens and user information
+ * Returns tokens, user information, and company context
  */
 export const authResponseSchema = z.object({
   success: z.literal(true),
   user: z.object({
     id: z.string().uuid('Invalid user ID'),
     email: z.string().email('Invalid email'),
+    role: z.enum(['admin', 'moderator', 'user']),
+    company_id: z.string().uuid('Invalid company ID'),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
-    roles: z.array(z.enum(['admin', 'moderator', 'user'])).default(['user']),
-    createdAt: z.string().datetime('Invalid datetime format'),
-    updatedAt: z.string().datetime('Invalid datetime format'),
+    created_at: z.string().datetime('Invalid datetime format'),
+    updated_at: z.string().datetime('Invalid datetime format').optional(),
+    isActive: z.boolean().optional(),
+    lastLoginAt: z.string().datetime('Invalid datetime format').optional(),
   }),
+  company: z.object({
+    id: z.string().uuid('Invalid company ID'),
+    cnpj: z.string().regex(/^\d{14}$/, 'Invalid CNPJ'),
+    name: z.string(),
+    createdAt: z.string().datetime('Invalid datetime format'),
+  }).optional(),
   tokens: z.object({
-    accessToken: z
+    access_token: z
       .string()
       .min(1, 'Access token cannot be empty'),
-    refreshToken: z
+    refresh_token: z
       .string()
       .min(1, 'Refresh token cannot be empty'),
     expiresIn: z
@@ -110,6 +274,7 @@ export const authResponseSchema = z.object({
     tokenType: z
       .enum(['Bearer'])
       .default('Bearer'),
+    issuedAt: z.string().datetime('Invalid datetime format'),
   }),
 });
 
@@ -194,8 +359,10 @@ export const resetPasswordConfirmSchema = z.object({
 });
 
 /**
- * TypeScript type definitions extracted from Zod schemas
- * These are used for type checking throughout the application
+ * ===========================
+ * TYPE EXPORTS (Zod Inferred Types)
+ * ===========================
+ * These are automatically derived from Zod schemas
  */
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
@@ -206,6 +373,11 @@ export type AuthError = z.infer<typeof authErrorSchema>;
 export type RefreshToken = z.infer<typeof refreshTokenSchema>;
 export type ResetPassword = z.infer<typeof resetPasswordSchema>;
 export type ResetPasswordConfirm = z.infer<typeof resetPasswordConfirmSchema>;
+
+// Multi-tenant types
+export type CompanyType = z.infer<typeof companySchema>;
+export type UserType = z.infer<typeof userSchema>;
+export type AuthTokenType = z.infer<typeof authTokenSchema>;
 
 /**
  * Combined response type for authentication endpoints
@@ -234,7 +406,10 @@ export type UserRole = 'admin' | 'moderator' | 'user';
 export type AuthErrorCode = z.infer<typeof authErrorSchema>['error']['code'];
 
 /**
- * Validation helper functions
+ * ===========================
+ * VALIDATION HELPER FUNCTIONS
+ * ===========================
+ * Safe parsing functions for all types
  */
 
 export const validateLoginRequest = (data: unknown) => {
@@ -267,6 +442,19 @@ export const validateResetPassword = (data: unknown) => {
 
 export const validateResetPasswordConfirm = (data: unknown) => {
   return resetPasswordConfirmSchema.safeParse(data);
+};
+
+// Multi-tenant validation helpers
+export const validateCompany = (data: unknown) => {
+  return companySchema.safeParse(data);
+};
+
+export const validateUser = (data: unknown) => {
+  return userSchema.safeParse(data);
+};
+
+export const validateAuthToken = (data: unknown) => {
+  return authTokenSchema.safeParse(data);
 };
 
 /**
@@ -307,3 +495,89 @@ export const TOKEN_EXPIRATION = {
   REFRESH: 7 * 24 * 60 * 60, // 7 days
   RESET_PASSWORD: 1 * 60 * 60, // 1 hour
 } as const;
+
+/**
+ * ===========================
+ * MULTI-TENANT UTILITIES
+ * ===========================
+ * Helper types and utilities for multi-tenant operations
+ */
+
+/**
+ * Type guard to check if a value is a valid Company
+ */
+export const isCompany = (value: unknown): value is Company => {
+  const result = companySchema.safeParse(value);
+  return result.success;
+};
+
+/**
+ * Type guard to check if a value is a valid User
+ */
+export const isUser = (value: unknown): value is User => {
+  const result = userSchema.safeParse(value);
+  return result.success;
+};
+
+/**
+ * Type guard to check if a value is a valid AuthToken
+ */
+export const isAuthToken = (value: unknown): value is AuthToken => {
+  const result = authTokenSchema.safeParse(value);
+  return result.success;
+};
+
+/**
+ * Utility type for pagination responses
+ */
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+/**
+ * Utility type for API request/response context
+ */
+export interface RequestContext {
+  userId: string;
+  companyId: string;
+  role: UserRole;
+  timestamp: Date;
+}
+
+/**
+ * Utility type for multi-tenant filter
+ */
+export interface TenantFilter {
+  company_id: string;
+  userId?: string;
+}
+
+/**
+ * Create a user context from a User object
+ */
+export const createUserContext = (user: User): RequestContext => ({
+  userId: user.id,
+  companyId: user.company_id,
+  role: user.role,
+  timestamp: new Date(),
+});
+
+/**
+ * Extract company_id from auth token
+ */
+export const getCompanyIdFromToken = (token: AuthToken): string => {
+  return token.company_id;
+};
+
+/**
+ * Extract user info from auth token
+ */
+export const getUserFromToken = (token: AuthToken): User => {
+  return token.user;
+};

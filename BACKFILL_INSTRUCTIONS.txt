@@ -1,0 +1,189 @@
+================================================================================
+Z-API INSTANCES BACKFILL - SETUP AND EXECUTION INSTRUCTIONS
+================================================================================
+
+CURRENT STATUS:
+- Z-API Instances table EXISTS but is missing company_id column
+- Companies table DOES NOT EXIST
+- Default Company needs to be created
+- Backfill operation needs to be executed
+
+================================================================================
+STEP 1: CREATE SCHEMA (Run in Supabase SQL Editor)
+================================================================================
+
+URL: https://supabase.com/dashboard/project/gqromcfhiosfppqlottz/sql
+
+Copy and paste the following SQL commands:
+
+---
+
+-- Create companies table
+CREATE TABLE IF NOT EXISTS companies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(100) NOT NULL UNIQUE,
+  description TEXT,
+  plan VARCHAR(50) NOT NULL DEFAULT 'starter'
+    CHECK (plan IN ('starter', 'professional', 'enterprise')),
+  status VARCHAR(50) NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active', 'paused', 'suspended', 'cancelled')),
+  owner_id UUID NOT NULL,
+  cnpj VARCHAR(18),
+  metadata JSONB DEFAULT '{}',
+  settings JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Create indexes for companies
+CREATE INDEX IF NOT EXISTS idx_companies_slug ON companies(slug) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_companies_owner_id ON companies(owner_id);
+CREATE INDEX IF NOT EXISTS idx_companies_status ON companies(status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_companies_plan ON companies(plan);
+CREATE INDEX IF NOT EXISTS idx_companies_created_at ON companies(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_companies_status_plan ON companies(status, plan) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_companies_cnpj ON companies(cnpj) WHERE cnpj IS NOT NULL;
+
+-- Add company_id to z_api_instances
+ALTER TABLE z_api_instances
+ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE;
+
+-- Create indexes for z_api_instances
+CREATE INDEX IF NOT EXISTS idx_z_api_instances_company_id ON z_api_instances(company_id);
+CREATE INDEX IF NOT EXISTS idx_z_api_instances_instance_id_company ON z_api_instances(instance_id, company_id);
+
+-- Enable RLS for companies
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+
+---
+
+Wait for the SQL to complete successfully, then proceed to STEP 2.
+
+================================================================================
+STEP 2: CREATE DEFAULT COMPANY (Run in Supabase SQL Editor)
+================================================================================
+
+Execute this SQL to create the default company:
+
+---
+
+INSERT INTO companies (
+  id,
+  name,
+  slug,
+  description,
+  plan,
+  status,
+  owner_id,
+  cnpj,
+  metadata,
+  settings,
+  created_at,
+  updated_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000001'::UUID,
+  'Default Company',
+  'default-company',
+  'Default company for unassigned API instances during migration',
+  'starter',
+  'active',
+  '00000000-0000-0000-0000-000000000000'::UUID,
+  '00.000.000/0000-00',
+  jsonb_build_object(
+    'backfill_default', true,
+    'created_by_migration', '003_backfill_company_id',
+    'created_at_migration', NOW()
+  ),
+  '{}',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT (slug) DO NOTHING;
+
+-- Verify default company was created
+SELECT id, name, slug, cnpj, status FROM companies WHERE slug = 'default-company';
+
+---
+
+You should see one row returned with:
+- ID: 00000000-0000-0000-0000-000000000001
+- Name: Default Company
+- Slug: default-company
+- CNPJ: 00.000.000/0000-00
+- Status: active
+
+================================================================================
+STEP 3: EXECUTE BACKFILL (Run from Node.js)
+================================================================================
+
+After completing STEP 1 and STEP 2, run the backfill script:
+
+  npm run backfill:complete
+
+Or manually:
+
+  node scripts/complete_backfill.js
+
+================================================================================
+EXPECTED RESULTS AFTER BACKFILL
+================================================================================
+
+The backfill script will:
+
+1. Count total z_api_instances: Expected = 2
+2. Count with company_id BEFORE: Expected = 0
+3. Create default company: Expected ID = 00000000-0000-0000-0000-000000000001
+4. Backfill z_api_instances with default company_id
+5. Verify results:
+
+Expected Final Results:
+  - Total instances: 2
+  - With company_id: 2
+  - Backfill percentage: 100%
+  - All instances linked to default-company
+
+Verification Query (can run in Supabase SQL Editor):
+
+  SELECT
+    COUNT(*) as total,
+    COUNT(CASE WHEN company_id IS NOT NULL THEN 1 END) as with_company,
+    ROUND(COUNT(CASE WHEN company_id IS NOT NULL THEN 1 END)::numeric / COUNT(*) * 100, 2) as percentage
+  FROM z_api_instances;
+
+Expected output:
+  total | with_company | percentage
+  ------|--------------|----------
+    2   |      2       |   100.00
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+If you encounter any issues:
+
+1. "table companies does not exist"
+   → Make sure you ran the STEP 1 SQL in the Supabase SQL Editor
+   → Verify you pasted the entire SQL block
+
+2. "column company_id does not exist"
+   → The ALTER TABLE statement in STEP 1 may have failed
+   → Check the SQL Editor for error messages
+   → Manually run: ALTER TABLE z_api_instances ADD COLUMN company_id UUID;
+
+3. "duplicate key value violates unique constraint"
+   → The default company already exists
+   → This is normal - the ON CONFLICT clause handles it
+   → The backfill will continue successfully
+
+4. Backfill shows 0 instances updated
+   → All instances may already have company_id assigned
+   → Check with the verification query above
+   → This is not an error - it means the backfill is complete
+
+================================================================================
+For more help, check:
+- Supabase Documentation: https://supabase.com/docs/guides/database/sql
+- Project URL: https://supabase.com/dashboard/project/gqromcfhiosfppqlottz
+================================================================================

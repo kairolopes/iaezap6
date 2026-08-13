@@ -1,0 +1,73 @@
+{
+  "timestamp": "2026-08-13T17:39:25.742Z",
+  "database_url": "https://gqromcfhiosfppqlottz.supabase.co",
+  "verification_steps": [
+    {
+      "step": 1,
+      "name": "SELECT COUNT(*) as total FROM companies",
+      "expected": "1+",
+      "actual": 0,
+      "passed": false,
+      "error": "Could not find the table 'public.companies' in the schema cache"
+    },
+    {
+      "step": 2,
+      "name": "SELECT COUNT(*) as total FROM users",
+      "expected": "1+",
+      "actual": 0,
+      "passed": false,
+      "error": "Could not find the table 'public.users' in the schema cache"
+    },
+    {
+      "step": 3,
+      "name": "SELECT COUNT(*) as total FROM pg_tables WHERE schema_name='public'",
+      "expected": "5+",
+      "actual": 4,
+      "passed": false,
+      "tables_found": [
+        "companies",
+        "users",
+        "company_members",
+        "z_api_instances"
+      ],
+      "tables_missing": [
+        "audit_logs"
+      ]
+    },
+    {
+      "step": 4,
+      "name": "SELECT COUNT(*) FROM pg_policies",
+      "expected": "13+",
+      "status": "REQUIRES_DIRECT_SQL_ACCESS",
+      "instructions": "Connect to PostgreSQL database and run query, or use Supabase SQL Editor"
+    },
+    {
+      "step": 5,
+      "name": "SELECT COUNT(*) FROM pg_indexes WHERE indexname LIKE 'idx_%'",
+      "expected": "25+",
+      "status": "REQUIRES_DIRECT_SQL_ACCESS",
+      "instructions": "Connect to PostgreSQL database and run query, or use Supabase SQL Editor"
+    }
+  ],
+  "summary": {
+    "companies_count": 0,
+    "users_count": 0,
+    "tables_found": 4,
+    "tables_list": [
+      "companies",
+      "users",
+      "company_members",
+      "z_api_instances"
+    ],
+    "passed_checks": 0,
+    "failed_checks": 3,
+    "requires_direct_sql": 2
+  },
+  "recommendations": [
+    "Seed test company data",
+    "Seed test user data",
+    "Create missing tables: audit_logs",
+    "Verify RLS policies via direct SQL access",
+    "Verify custom indexes via direct SQL access"
+  ]
+}

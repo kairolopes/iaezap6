@@ -1,0 +1,255 @@
+================================================================================
+Z-API INSTANCES BACKFILL - EXECUTION SUMMARY
+================================================================================
+
+OBJECTIVE:
+Complete backfill of z_api_instances table with company_id column
+Expected Result: 2 instances with 100% backfill
+
+CURRENT STATE:
+✓ z_api_instances table exists (2 rows)
+✗ companies table does not exist (NEEDS CREATION)
+✗ company_id column does not exist (NEEDS ADDITION)
+
+================================================================================
+EXECUTION PLAN
+================================================================================
+
+THREE STEPS REQUIRED:
+
+STEP 1: CREATE SCHEMA IN SUPABASE SQL EDITOR
+──────────────────────────────────────────
+
+Open: https://supabase.com/dashboard/project/gqromcfhiosfppqlottz/sql
+
+Copy entire SQL from: migrations/002_add_company_support.sql
+
+This creates:
+  - companies table with proper schema
+  - company_id column in z_api_instances
+  - 9 optimized indexes
+  - Row Level Security
+
+
+STEP 2: CREATE DEFAULT COMPANY IN SUPABASE SQL EDITOR
+───────────────────────────────────────────────────
+
+Execute this SQL:
+
+INSERT INTO companies (
+  id, name, slug, description, plan, status, owner_id, cnpj,
+  metadata, settings, created_at, updated_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000001'::UUID,
+  'Default Company',
+  'default-company',
+  'Default company for unassigned API instances during migration',
+  'starter',
+  'active',
+  '00000000-0000-0000-0000-000000000000'::UUID,
+  '00.000.000/0000-00',
+  jsonb_build_object(
+    'backfill_default', true,
+    'created_by_migration', '003_backfill_company_id',
+    'created_at_migration', NOW()
+  ),
+  '{}',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT (slug) DO NOTHING;
+
+Then verify:
+SELECT id, name, slug FROM companies WHERE slug = 'default-company';
+
+
+STEP 3: EXECUTE BACKFILL SCRIPT
+───────────────────────────────
+
+Run from terminal:
+
+  npm run backfill:complete
+
+Or:
+
+  node scripts/complete_backfill.js
+
+This will:
+  1. Verify schema exists
+  2. Check initial state (0 with company_id)
+  3. Create/verify default company
+  4. Backfill all instances
+  5. Verify final state (2 with company_id)
+  6. Report 100% success
+
+================================================================================
+KEY METRICS
+================================================================================
+
+BEFORE BACKFILL:
+  Total instances: 2
+  With company_id: 0
+  Backfill percentage: 0%
+
+EXPECTED AFTER BACKFILL:
+  Total instances: 2
+  With company_id: 2
+  Backfill percentage: 100%
+
+DEFAULT COMPANY:
+  ID: 00000000-0000-0000-0000-000000000001
+  Name: Default Company
+  Slug: default-company
+  CNPJ: 00.000.000/0000-00
+  Status: active
+
+================================================================================
+FILES CREATED
+================================================================================
+
+Migration Files:
+  migrations/002_add_company_support.sql - Schema creation SQL
+  migrations/003_backfill_company_id.sql - Backfill operations SQL
+
+Execution Scripts:
+  scripts/complete_backfill.js - Main backfill execution (PRIMARY)
+  scripts/schema_builder.js - Schema verification tool
+  scripts/execute_with_pg.mjs - Direct PostgreSQL connection
+  scripts/execute_sql_migration.js - SQL file executor
+
+Documentation:
+  SETUP_AND_BACKFILL.md - Detailed step-by-step guide
+  BACKFILL_INSTRUCTIONS.txt - Quick reference
+  BACKFILL_EXECUTION_REPORT.txt - Comprehensive report
+  BACKFILL_SUMMARY.txt - This file
+
+Updated Files:
+  package.json - Added npm scripts for backfill
+
+npm Scripts Available:
+  npm run backfill:complete - Execute backfill
+  npm run backfill:schema - Check schema status
+  npm run migration:execute - Run migrations
+
+================================================================================
+VERIFICATION QUERIES
+================================================================================
+
+After backfill completes, verify with these Supabase SQL Editor queries:
+
+1. Check companies table:
+   SELECT COUNT(*) as count FROM companies;
+   Expected: >= 1
+
+2. Check default company:
+   SELECT id, name, slug, status FROM companies WHERE slug = 'default-company';
+   Expected: 1 row (00000000-0000-0000-0000-000000000001)
+
+3. Check company_id column:
+   SELECT column_name FROM information_schema.columns
+   WHERE table_name = 'z_api_instances' AND column_name = 'company_id';
+   Expected: 1 row
+
+4. Check backfill completion:
+   SELECT
+     COUNT(*) as total,
+     COUNT(CASE WHEN company_id IS NOT NULL THEN 1 END) as with_company,
+     ROUND(COUNT(CASE WHEN company_id IS NOT NULL THEN 1 END)::numeric / COUNT(*) * 100, 2) as percentage
+   FROM z_api_instances;
+   Expected: total=2, with_company=2, percentage=100.00
+
+5. Check instance distribution:
+   SELECT company_id, COUNT(*) as count FROM z_api_instances GROUP BY company_id;
+   Expected: 1 row (company_id=00000000-0000-0000-0000-000000000001, count=2)
+
+================================================================================
+SUCCESS CRITERIA
+================================================================================
+
+Backfill is SUCCESSFUL when:
+
+✓ companies table exists
+✓ company_id column exists in z_api_instances
+✓ Default company created with correct ID
+✓ All 2 instances have company_id assigned
+✓ Backfill percentage = 100%
+✓ No data loss (2 instances before and after)
+✓ Script reports "✅ SUCCESS - All checks passed!"
+
+================================================================================
+NEXT ACTIONS
+================================================================================
+
+IMMEDIATE:
+1. Open Supabase SQL Editor
+2. Copy SQL from migrations/002_add_company_support.sql
+3. Execute schema creation
+4. Execute default company creation
+5. Run: npm run backfill:complete
+
+AFTER SUCCESSFUL BACKFILL:
+1. Run verification queries
+2. Confirm all 2 instances have company_id
+3. Review application code for company_id usage
+4. Consider adding NOT NULL constraint (optional)
+5. Deploy to production if needed
+
+================================================================================
+REFERENCE LINKS
+================================================================================
+
+Supabase Dashboard:
+  https://supabase.com/dashboard/project/gqromcfhiosfppqlottz
+
+SQL Editor:
+  https://supabase.com/dashboard/project/gqromcfhiosfppqlottz/sql
+
+Documentation:
+  - Read: SETUP_AND_BACKFILL.md for complete guide
+  - Read: BACKFILL_EXECUTION_REPORT.txt for detailed information
+  - Read: BACKFILL_INSTRUCTIONS.txt for quick reference
+
+Git Commit:
+  All files are ready to commit after successful backfill execution
+
+================================================================================
+ENVIRONMENT INFO
+================================================================================
+
+Supabase Project:
+  URL: https://gqromcfhiosfppqlottz.supabase.co
+  Database: postgres
+  Host: gqromcfhiosfppqlottz.db.supabase.co
+  Port: 5432
+
+Z-API Instances:
+  Table: z_api_instances
+  Current Rows: 2
+  Columns Before: id, tenant_id, instance_id, token, phone, created_at
+  Columns After: id, tenant_id, instance_id, token, phone, created_at, company_id
+
+Companies:
+  Table: companies (NEW)
+  Rows After: >= 1
+  Primary Key: id (UUID)
+  Key Columns: name, slug, plan, status, owner_id, cnpj
+
+================================================================================
+QUICK START
+================================================================================
+
+For experienced users, here's the quick version:
+
+1. Supabase SQL Editor → Copy migrations/002_add_company_support.sql → Execute
+2. Supabase SQL Editor → Paste default company INSERT → Execute
+3. Terminal → npm run backfill:complete
+4. Done! Backfill 100% complete
+
+Expected output after step 3:
+  ✅ PERFECT MATCH: Expected 2 instances, 2 with company_id - BACKFILL 100% COMPLETE
+
+================================================================================
+For detailed instructions, see: SETUP_AND_BACKFILL.md
+For comprehensive details, see: BACKFILL_EXECUTION_REPORT.txt
+Last updated: 2026-08-13
+================================================================================

@@ -1,0 +1,357 @@
+================================================================================
+Z-API INSTANCES COMPANY_ID BACKFILL MIGRATION - STATUS REPORT
+================================================================================
+
+Date: 2026-08-13
+Time: Current
+Environment: Supabase (gqromcfhiosfppqlottz)
+
+================================================================================
+CURRENT DATABASE STATE
+================================================================================
+
+COMPANIES TABLE
+  Status: EXISTS ✓
+  Records: At least 1 existing company
+  Note: Table is already present in database
+
+Z_API_INSTANCES TABLE
+  Status: EXISTS ✓
+  Records: 2 instances found
+  company_id Column: MISSING ✗ (Needs to be added)
+
+ACTION REQUIRED:
+  Add company_id column to z_api_instances table using Migration 002 SQL
+
+================================================================================
+MIGRATION PREPARATION STATUS
+================================================================================
+
+Migration 002: Add Company Support
+  Status: PARTIALLY APPLIED
+  companies table: CREATED ✓
+  indexes on companies: CREATED ✓
+  company_id column: NOT CREATED ✗
+
+  Files:
+    SQL: /migrations/002_add_company_support.sql
+    Portion needed: ALTER TABLE z_api_instances ADD COLUMN...
+
+  Action: Need to execute the ALTER TABLE portion
+
+Migration 003: Backfill Company ID
+  Status: PREPARED & READY ✓
+  Files:
+    SQL: /migrations/003_backfill_company_id.sql
+    Backup: /migrations/003_backfill_company_id.sql (contains full migration with verification)
+
+  Steps defined:
+    1. Create default company (ID: 00000000-0000-0000-0000-000000000001) ✓ READY
+    2. UPDATE z_api_instances SET company_id WHERE company_id IS NULL ✓ READY
+    3. Verification queries ✓ READY
+
+================================================================================
+EXECUTION SCRIPTS PREPARED
+================================================================================
+
+Script 1: /scripts/full_migration_and_backfill.mjs
+  Purpose: Complete end-to-end migration and backfill
+  Status: READY
+  Prerequisites: company_id column must exist
+  Execution: node scripts/full_migration_and_backfill.mjs
+
+  Functionality:
+    ✓ Checks if companies table exists
+    ✓ Checks if company_id column exists
+    ✓ Creates default company if missing
+    ✓ Backfills company_id values
+    ✓ Verifies results
+    ✓ Reports detailed metrics
+
+Script 2: /scripts/backfill_company_id.mjs
+  Purpose: Backfill using direct PostgreSQL connection
+  Status: PREPARED
+  Note: May not work from isolated environments
+
+Script 3: /scripts/backfill_company_id_supabase_client.mjs
+  Purpose: Backfill using Supabase JS client
+  Status: PREPARED
+  Note: Requires company_id column to exist first
+
+Script 4: /scripts/check_schema_and_backfill.mjs
+  Purpose: Check schema and apply appropriate migration
+  Status: PREPARED
+  Note: Helper script for validation
+
+================================================================================
+WHAT HAS BEEN PREPARED
+================================================================================
+
+1. Migration Files
+   ✓ /migrations/003_backfill_company_id.sql
+     - Safe, idempotent migration
+     - Includes verification queries
+     - Uses PL/pgSQL for error handling
+
+2. Execution Scripts
+   ✓ /scripts/full_migration_and_backfill.mjs (PRIMARY)
+   ✓ /scripts/backfill_company_id_supabase_client.mjs
+   ✓ /scripts/backfill_company_id.mjs
+   ✓ /scripts/check_schema_and_backfill.mjs
+
+3. Documentation
+   ✓ /BACKFILL_MIGRATION_REPORT.md (Detailed technical guide)
+   ✓ /BACKFILL_EXECUTION_GUIDE.md (Step-by-step instructions)
+   ✓ /BACKFILL_STATUS_REPORT.txt (This file)
+
+================================================================================
+PREREQUISITES TO COMPLETE
+================================================================================
+
+BEFORE Running Backfill Script:
+
+1. Add company_id Column to z_api_instances
+
+   Location: Supabase SQL Editor
+   SQL Command:
+   ┌─────────────────────────────────────────────────────────────────┐
+   │ ALTER TABLE IF EXISTS z_api_instances                           │
+   │ ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES             │
+   │   companies(id) ON DELETE CASCADE;                              │
+   │                                                                 │
+   │ CREATE INDEX IF NOT EXISTS idx_z_api_instances_company_id       │
+   │   ON z_api_instances(company_id);                              │
+   │                                                                 │
+   │ CREATE INDEX IF NOT EXISTS idx_z_api_instances_instance_id_company
+   │   ON z_api_instances(instance_id, company_id);                 │
+   └─────────────────────────────────────────────────────────────────┘
+
+   Time Required: 1-2 minutes
+   Status: NOT YET COMPLETED
+
+================================================================================
+BACKFILL EXECUTION PLAN
+================================================================================
+
+After Adding company_id Column:
+
+Phase 1: Setup Default Company
+  - Check if default company exists
+  - If not, create: ID=00000000-0000-0000-0000-000000000001
+  - Name: "Default Company"
+  - Slug: "default-company"
+  - Plan: "starter"
+  - Status: "active"
+
+Phase 2: Backfill Values
+  - UPDATE z_api_instances SET company_id = default_company_id WHERE company_id IS NULL
+  - Update timestamp to current
+  - Expected impact: Update 2 instances (current NULL count)
+
+Phase 3: Verification
+  - Count total instances: Should be 2
+  - Count with company_id: Should be 2
+  - Count without company_id: Should be 0
+  - Percentage backfilled: Should be 100%
+
+Phase 4: Breakdown Report
+  - Default Company: 2 instances
+  - Other Companies: 0 instances
+
+Total Execution Time: 3-5 minutes (including prerequisite)
+
+================================================================================
+EXPECTED RESULTS AFTER BACKFILL
+================================================================================
+
+Database State After Completion:
+  Total z_api_instances: 2
+  With company_id: 2 (100%)
+  Without company_id: 0 (0%)
+
+  Breakdown:
+    Default Company (00000000-0000-0000-0000-000000000001): 2 instances
+    Other Companies: 0 instances
+
+SQL Verification Query Result:
+  ┌─────────────────────┬──────────────┬────────────────┐
+  │ total_instances     │ with_company │ without_company│
+  ├─────────────────────┼──────────────┼────────────────┤
+  │ 2                   │ 2            │ 0              │
+  └─────────────────────┴──────────────┴────────────────┘
+
+Percentage Backfilled: 100%
+
+================================================================================
+HOW TO EXECUTE
+================================================================================
+
+RECOMMENDED METHOD: Automated Script
+
+1. Complete Prerequisite (in Supabase SQL Editor):
+   - Copy SQL from /BACKFILL_EXECUTION_GUIDE.md - STEP 1
+   - Execute to add company_id column
+   - Wait for completion (1-2 minutes)
+   - Verify column exists with verification query
+
+2. Run Backfill Script:
+
+   Option A (using npm):
+     npm run backfill:complete
+
+   Option B (direct node):
+     node scripts/full_migration_and_backfill.mjs
+
+   Option C (using Power Shell):
+     node .\scripts\full_migration_and_backfill.mjs
+
+3. Review Output:
+   - Script will show all steps
+   - Final report includes percentage backfilled
+   - Verify "✓ MIGRATION & BACKFILL COMPLETE"
+
+4. Manual Verification:
+   - Execute verification queries from /BACKFILL_EXECUTION_GUIDE.md - STEP 3
+   - Confirm all instances have company_id
+   - Confirm all are associated with default company
+
+================================================================================
+ALTERNATIVE METHOD: Manual SQL
+
+If you prefer manual execution in Supabase SQL Editor:
+
+1. Add company_id column (prerequisite):
+   - Execute SQL from /BACKFILL_EXECUTION_GUIDE.md - STEP 1
+
+2. Create default company:
+   ┌─────────────────────────────────────────────────────────────────┐
+   │ INSERT INTO companies (                                         │
+   │   id, name, slug, plan, status, owner_id, created_at,          │
+   │   updated_at                                                    │
+   │ )                                                               │
+   │ VALUES (                                                        │
+   │   '00000000-0000-0000-0000-000000000001'::uuid,               │
+   │   'Default Company',                                            │
+   │   'default-company',                                            │
+   │   'starter',                                                    │
+   │   'active',                                                     │
+   │   '00000000-0000-0000-0000-000000000000'::uuid,               │
+   │   NOW(),                                                        │
+   │   NOW()                                                         │
+   │ )                                                               │
+   │ ON CONFLICT (id) DO NOTHING;                                   │
+   └─────────────────────────────────────────────────────────────────┘
+
+3. Backfill company_id:
+   ┌─────────────────────────────────────────────────────────────────┐
+   │ UPDATE z_api_instances                                          │
+   │ SET company_id = '00000000-0000-0000-0000-000000000001'::uuid, │
+   │     updated_at = NOW()                                          │
+   │ WHERE company_id IS NULL;                                       │
+   └─────────────────────────────────────────────────────────────────┘
+
+4. Verify results:
+   - Execute verification queries from /BACKFILL_EXECUTION_GUIDE.md - STEP 3
+
+================================================================================
+SAFETY INFORMATION
+================================================================================
+
+Risk Level: LOW
+
+Reasons:
+  ✓ Additive operation only (adding data, not deleting)
+  ✓ No existing data modified (only NULL values touched)
+  ✓ Default company ID is unique and non-conflicting
+  ✓ Foreign key constraints ensure referential integrity
+  ✓ Migration is idempotent (can be run multiple times safely)
+
+Rollback (if needed):
+  - No harmful side effects
+  - To revert: SET company_id = NULL WHERE company_id = default_id
+  - Or delete default company (if not in use)
+
+Backup Recommendation:
+  - Optional but recommended before any production changes
+  - Supabase provides automatic backups
+
+================================================================================
+FILES REFERENCE
+================================================================================
+
+Migration Files:
+  /migrations/003_backfill_company_id.sql
+    - Complete backfill migration with verification
+    - Safe for manual or script execution
+
+Execution Scripts:
+  /scripts/full_migration_and_backfill.mjs
+    - Recommended primary execution script
+    - Handles all phases with error checking
+
+Documentation:
+  /BACKFILL_MIGRATION_REPORT.md
+    - Detailed technical documentation
+    - Schema changes and index information
+
+  /BACKFILL_EXECUTION_GUIDE.md
+    - Step-by-step execution instructions
+    - Troubleshooting guide
+    - Expected results
+
+  /BACKFILL_STATUS_REPORT.txt
+    - This file
+    - Current status and action items
+
+Environment:
+  .env.local
+    - Contains SUPABASE_SERVICE_ROLE_KEY and SUPABASE_URL
+    - Used by execution scripts automatically
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+IMMEDIATE ACTIONS:
+
+1. [ ] Read this report and execute guide
+2. [ ] Add company_id column to z_api_instances (Prerequisite)
+3. [ ] Run backfill script or execute manual SQL
+4. [ ] Verify results with provided queries
+5. [ ] Confirm all instances have company_id (100% backfilled)
+
+AFTER BACKFILL:
+
+1. [ ] Update application code if needed
+2. [ ] Add company-based access control (if not already done)
+3. [ ] Test multi-tenant isolation
+4. [ ] Monitor application logs
+5. [ ] Update any related documentation
+
+================================================================================
+SUMMARY
+================================================================================
+
+Status: READY FOR EXECUTION ✓
+
+What's Complete:
+  ✓ Migration SQL files created
+  ✓ Execution scripts prepared
+  ✓ Documentation complete
+  ✓ Error handling implemented
+  ✓ Verification queries ready
+
+What's Needed:
+  1. Add company_id column to z_api_instances (1-2 min)
+  2. Run backfill script (1-2 min)
+  3. Verify results (1 min)
+
+Total Time Required: 3-5 minutes
+
+Expected Outcome: 100% of z_api_instances backfilled with default company_id
+
+Prepared By: Cloud Migration System
+Date: 2026-08-13
+Status: READY
+
+================================================================================

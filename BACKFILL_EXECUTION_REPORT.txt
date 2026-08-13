@@ -1,0 +1,358 @@
+================================================================================
+Z-API INSTANCES BACKFILL - EXECUTION REPORT
+================================================================================
+
+Date: 2026-08-13
+Task: Execute backfill script for z_api_instances company_id column
+Status: SETUP COMPLETE - READY FOR EXECUTION
+
+================================================================================
+CURRENT DATABASE STATE
+================================================================================
+
+Existing Tables:
+✓ z_api_instances (2 rows)
+  - Columns: id, tenant_id, instance_id, token, phone, created_at
+  - Missing: company_id column
+
+Missing Tables:
+✗ companies (needs creation)
+
+Missing Columns:
+✗ z_api_instances.company_id
+
+================================================================================
+EXECUTION STEPS (COMPLETED)
+================================================================================
+
+✓ Step 1: Created migration files
+  - migrations/002_add_company_support.sql
+  - migrations/003_backfill_company_id.sql
+
+✓ Step 2: Created execution scripts
+  - scripts/complete_backfill.js (main backfill execution script)
+  - scripts/schema_builder.js (schema verification tool)
+  - scripts/execute_with_pg.mjs (direct PostgreSQL connection)
+  - scripts/execute_sql_migration.js (SQL file executor)
+
+✓ Step 3: Created comprehensive documentation
+  - SETUP_AND_BACKFILL.md (detailed step-by-step guide)
+  - BACKFILL_INSTRUCTIONS.txt (quick reference)
+  - This file (execution report)
+
+✓ Step 4: Added npm scripts
+  - npm run backfill:complete
+  - npm run backfill:schema
+  - npm run migration:execute
+
+================================================================================
+REQUIRED MANUAL STEPS
+================================================================================
+
+Due to network/environment constraints, the SQL schema creation must be done
+manually in the Supabase SQL Editor.
+
+STEP 1: Create Schema and Add Column
+────────────────────────────────────
+
+1. Open: https://supabase.com/dashboard/project/gqromcfhiosfppqlottz/sql
+2. Create new query
+3. Copy ALL SQL from: migrations/002_add_company_support.sql
+4. Click RUN
+5. Wait for "Query executed successfully"
+
+STEP 2: Create Default Company
+──────────────────────────────
+
+1. In same SQL Editor, create new query
+2. Run this SQL:
+
+   INSERT INTO companies (
+     id, name, slug, description, plan, status, owner_id, cnpj,
+     metadata, settings, created_at, updated_at
+   ) VALUES (
+     '00000000-0000-0000-0000-000000000001'::UUID,
+     'Default Company',
+     'default-company',
+     'Default company for unassigned API instances during migration',
+     'starter',
+     'active',
+     '00000000-0000-0000-0000-000000000000'::UUID,
+     '00.000.000/0000-00',
+     jsonb_build_object(
+       'backfill_default', true,
+       'created_by_migration', '003_backfill_company_id',
+       'created_at_migration', NOW()
+     ),
+     '{}',
+     CURRENT_TIMESTAMP,
+     CURRENT_TIMESTAMP
+   )
+   ON CONFLICT (slug) DO NOTHING;
+
+3. Verify with:
+   SELECT id, name, slug, cnpj, status FROM companies WHERE slug = 'default-company';
+
+STEP 3: Run Backfill Script
+───────────────────────────
+
+After schema is ready, execute:
+
+   npm run backfill:complete
+
+Or:
+
+   node scripts/complete_backfill.js
+
+================================================================================
+EXPECTED RESULTS
+================================================================================
+
+After completing all steps above, you should see:
+
+PRIMARY METRIC:
+✓ Backfill percentage: 100%
+✓ Total instances: 2
+✓ With company_id: 2
+✓ Backfill status: SUCCESS
+
+DETAILED VERIFICATION:
+
+Verification Query (run in Supabase SQL Editor):
+
+  SELECT
+    COUNT(*) as total,
+    COUNT(CASE WHEN company_id IS NOT NULL THEN 1 END) as with_company,
+    ROUND(COUNT(CASE WHEN company_id IS NOT NULL THEN 1 END)::numeric / COUNT(*) * 100, 2) as percentage
+  FROM z_api_instances;
+
+Expected Output:
+  | total | with_company | percentage |
+  |-------|--------------|------------|
+  |   2   |      2       |   100.00   |
+
+SCRIPT OUTPUT:
+
+The backfill script will report:
+
+  PHASE 1: Schema Verification
+  - Companies table: ✓
+  - Z-API Instances table: ✓
+  - company_id column: ✓
+
+  PHASE 2: Initial State Collection
+  - Total instances: 2
+  - With company_id: 0
+  - Without company_id: 2
+
+  PHASE 3: Default Company Setup
+  - Default company verified: 00000000-0000-0000-0000-000000000001
+
+  PHASE 4: Backfilling company_id
+  - Instances updated: 2
+
+  PHASE 5: Final State Verification
+  - Total instances: 2
+  - With company_id: 2
+  - Backfill percentage: 100%
+
+  PHASE 6: Data Integrity Verification
+  - No instances lost: ✓
+  - All instances have company_id: ✓
+
+  OVERALL STATUS: ✅ SUCCESS - All checks passed!
+
+================================================================================
+DATABASE SCHEMA DETAILS
+================================================================================
+
+COMPANIES TABLE STRUCTURE:
+
+  Column Name    | Type                           | Constraints
+  ───────────────|────────────────────────────────|──────────────────────────
+  id             | UUID                           | PRIMARY KEY, DEFAULT gen_random_uuid()
+  name           | VARCHAR(255)                   | NOT NULL
+  slug           | VARCHAR(100)                   | NOT NULL, UNIQUE
+  description    | TEXT                           |
+  plan           | VARCHAR(50)                    | DEFAULT 'starter', CHECK
+  status         | VARCHAR(50)                    | DEFAULT 'active', CHECK
+  owner_id       | UUID                           | NOT NULL
+  cnpj           | VARCHAR(18)                    |
+  metadata       | JSONB                          | DEFAULT '{}'
+  settings       | JSONB                          | DEFAULT '{}'
+  created_at     | TIMESTAMP WITH TIME ZONE       | DEFAULT CURRENT_TIMESTAMP
+  updated_at     | TIMESTAMP WITH TIME ZONE       | DEFAULT CURRENT_TIMESTAMP
+  deleted_at     | TIMESTAMP WITH TIME ZONE       |
+
+DEFAULT COMPANY RECORD:
+
+  Field          | Value
+  ───────────────|─────────────────────────────────────────────────────────────
+  ID             | 00000000-0000-0000-0000-000000000001
+  Name           | Default Company
+  Slug           | default-company
+  Description    | Default company for unassigned API instances during migration
+  Plan           | starter
+  Status         | active
+  Owner ID       | 00000000-0000-0000-0000-000000000000
+  CNPJ           | 00.000.000/0000-00
+  Created At     | Current timestamp
+
+Z_API_INSTANCES NEW COLUMN:
+
+  Column Name    | Type       | Constraints
+  ───────────────|────────────|──────────────────────────────────────────
+  company_id     | UUID       | REFERENCES companies(id) ON DELETE CASCADE
+
+INDEXES CREATED:
+
+  - idx_companies_slug (on companies.slug)
+  - idx_companies_owner_id (on companies.owner_id)
+  - idx_companies_status (on companies.status)
+  - idx_companies_plan (on companies.plan)
+  - idx_companies_created_at (on companies.created_at)
+  - idx_companies_status_plan (on companies.status, plan)
+  - idx_companies_cnpj (on companies.cnpj)
+  - idx_z_api_instances_company_id (on z_api_instances.company_id)
+  - idx_z_api_instances_instance_id_company (on z_api_instances.instance_id, company_id)
+
+================================================================================
+VERIFICATION CHECKLIST
+================================================================================
+
+After executing the backfill, verify:
+
+□ companies table exists
+  SELECT COUNT(*) FROM companies;  -- Expected: >= 1
+
+□ default-company record exists
+  SELECT * FROM companies WHERE slug = 'default-company';
+  -- Expected: 1 row with ID 00000000-0000-0000-0000-000000000001
+
+□ company_id column exists in z_api_instances
+  SELECT column_name FROM information_schema.columns
+  WHERE table_name = 'z_api_instances' AND column_name = 'company_id';
+  -- Expected: 1 row
+
+□ all z_api_instances have company_id
+  SELECT COUNT(*) FROM z_api_instances WHERE company_id IS NULL;
+  -- Expected: 0
+
+□ backfill percentage is 100%
+  SELECT
+    COUNT(*) as total,
+    COUNT(CASE WHEN company_id IS NOT NULL THEN 1 END) as with_company,
+    ROUND(COUNT(CASE WHEN company_id IS NOT NULL THEN 1 END)::numeric / COUNT(*) * 100, 2) as pct
+  FROM z_api_instances;
+  -- Expected: total=2, with_company=2, pct=100.00
+
+□ all instances linked to default company
+  SELECT company_id, COUNT(*) FROM z_api_instances GROUP BY company_id;
+  -- Expected: 1 row with company_id=00000000-0000-0000-0000-000000000001, count=2
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Issue: "Column company_id does not exist"
+Solution: Verify STEP 1 SQL ran successfully in Supabase SQL Editor
+          - Check for error messages
+          - Manually run: ALTER TABLE z_api_instances ADD COLUMN company_id UUID;
+
+Issue: "Table companies does not exist"
+Solution: Verify STEP 1 was completed
+          - Check Supabase SQL Editor for error messages
+          - Manually run the CREATE TABLE companies statement
+
+Issue: "Duplicate key value violates unique constraint"
+Solution: This is normal for the default company creation
+          - The ON CONFLICT clause handles this automatically
+          - The backfill will continue successfully
+
+Issue: Script shows "0 instances updated"
+Solution: All instances may already have company_id
+          - Run verification query above
+          - If all have company_id, backfill is already complete
+
+Issue: Cannot connect to database
+Solution: Network isolation - manual SQL steps are required
+          - Use Supabase SQL Editor instead
+          - Backfill script will work once schema is created
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Complete STEP 1: Create Schema
+   - Open Supabase SQL Editor
+   - Copy SQL from migrations/002_add_company_support.sql
+   - Execute and wait for success
+
+2. Complete STEP 2: Create Default Company
+   - Execute default company INSERT statement
+   - Verify with SELECT query
+
+3. Execute Backfill Script
+   npm run backfill:complete
+
+4. Verify Results
+   - Run verification query
+   - Check all boxes in verification checklist
+
+5. Deploy
+   - After successful backfill, consider:
+     - Making company_id NOT NULL in production
+     - Adding unique constraint on (company_id, instance_id)
+     - Updating application code to require company_id
+
+================================================================================
+FILE REFERENCE
+================================================================================
+
+Migration Scripts:
+  - migrations/002_add_company_support.sql
+  - migrations/003_backfill_company_id.sql
+
+Execution Scripts:
+  - scripts/complete_backfill.js (PRIMARY - use this)
+  - scripts/schema_builder.js
+  - scripts/execute_with_pg.mjs
+  - scripts/execute_sql_migration.js
+
+Documentation:
+  - SETUP_AND_BACKFILL.md (complete step-by-step guide)
+  - BACKFILL_INSTRUCTIONS.txt (quick reference)
+  - BACKFILL_EXECUTION_REPORT.txt (this file)
+
+NPM Scripts:
+  - npm run backfill:complete
+  - npm run backfill:schema
+  - npm run migration:execute
+
+================================================================================
+SUMMARY
+================================================================================
+
+Status: ✅ READY FOR EXECUTION
+
+What's been done:
+  ✓ Database schema migration files created
+  ✓ Backfill execution scripts created
+  ✓ Comprehensive documentation written
+  ✓ NPM scripts configured
+
+What you need to do:
+  ⏳ Step 1: Run schema creation SQL in Supabase SQL Editor
+  ⏳ Step 2: Run default company creation SQL in Supabase SQL Editor
+  ⏳ Step 3: Execute npm run backfill:complete
+  ⏳ Step 4: Verify with provided SQL queries
+
+Expected Result:
+  ✅ Total z_api_instances: 2
+  ✅ With company_id: 2
+  ✅ Backfill percentage: 100%
+
+================================================================================
+For assistance, refer to SETUP_AND_BACKFILL.md or contact support.
+Last updated: 2026-08-13
+================================================================================

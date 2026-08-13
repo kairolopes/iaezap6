@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { registerRequestSchema, AUTH_STATUS_CODES, TOKEN_EXPIRATION } from '@/types/auth';
-import { registerUser } from '@/lib/supabase';
-import { getTokenExpiresIn } from '@/lib/jwt';
+import bcrypt from 'bcrypt';
+import { z } from 'zod';
+import { AUTH_STATUS_CODES, TOKEN_EXPIRATION } from '@/types/auth';
+import { generateTokenPair } from '@/lib/jwt';
+import { createSupabaseServerClient } from '@/lib/supabase';
 
 /**
  * POST /api/auth/register
  *
- * Creates a new user account with email and password
- * Validates password complexity and handles duplicate email errors
- * Returns access and refresh tokens
+ * Creates a new company (if needed) and registers a new user
+ * Validates input, checks for existing company by CNPJ,
+ * hashes password with bcrypt, and generates JWT tokens
  *
  * Request body:
  * {
  *   "email": "user@example.com",
  *   "password": "SecurePass123!",
- *   "firstName": "John",
- *   "lastName": "Doe",
- *   "acceptTerms": true
+ *   "company_cnpj": "12345678901234",
+ *   "company_name": "My Company"
  * }
  *
  * Success Response (201):
@@ -25,33 +26,187 @@ import { getTokenExpiresIn } from '@/lib/jwt';
  *   "user": {
  *     "id": "uuid",
  *     "email": "user@example.com",
- *     "firstName": "John",
- *     "lastName": "Doe",
- *     "roles": ["user"],
- *     "createdAt": "2026-08-12T10:00:00Z",
- *     "updatedAt": "2026-08-12T10:00:00Z"
+ *     "company_id": "uuid",
+ *     "role": "admin",
+ *     "created_at": "2026-08-13T10:00:00Z"
  *   },
- *   "tokens": {
- *     "accessToken": "eyJhbGciOiJIUzI1NiIs...",
- *     "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
- *     "expiresIn": 900,
+ *   "token": {
+ *     "accessToken": "eyJhbGciOiJSUzI1NiIs...",
+ *     "refreshToken": "eyJhbGciOiJSUzI1NiIs...",
+ *     "expiresIn": 3600,
  *     "tokenType": "Bearer"
  *   }
  * }
  *
  * Error Responses:
  * 400 - Invalid request (validation error)
- * 409 - User already exists (duplicate email)
- * 422 - Unprocessable entity (weak password)
+ * 409 - Company or user already exists
  * 500 - Internal server error
- *
- * Password Requirements:
- * - Minimum 8 characters
- * - At least one uppercase letter (A-Z)
- * - At least one lowercase letter (a-z)
- * - At least one digit (0-9)
- * - At least one special character (@$!%*?&)
  */
+
+/**
+ * Validation schema for registration requests
+ */
+const registerSchema = z.object({
+  email: z
+    .string()
+    .email('Invalid email format')
+    .toLowerCase()
+    .trim(),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .max(128, 'Password must not exceed 128 characters')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      'Password must contain uppercase, lowercase, number, and special character'
+    ),
+  company_cnpj: z
+    .string()
+    .regex(/^\d{14}$/, 'CNPJ must be exactly 14 digits'),
+  company_name: z
+    .string()
+    .min(3, 'Company name must be at least 3 characters')
+    .max(255, 'Company name must not exceed 255 characters')
+    .trim(),
+});
+
+type RegisterRequest = z.infer<typeof registerSchema>;
+
+/**
+ * Check if company exists by CNPJ
+ */
+async function getCompanyByCNPJ(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  cnpj: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('companies')
+      .select('id, cnpj, name')
+      .eq('cnpj', cnpj)
+      .eq('deleted_at', null)
+      .single();
+
+    if (error) {
+      // No company found (expected error for single() when no match)
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      console.error('Error checking company by CNPJ:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Unexpected error checking company:', err);
+    return null;
+  }
+}
+
+/**
+ * Create a new company
+ */
+async function createCompany(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  cnpj: string,
+  name: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('companies')
+      .insert([
+        {
+          cnpj,
+          name,
+          status: 'active',
+          created_at: new Date().toISOString(),
+        },
+      ])
+      .select('id, cnpj, name, created_at')
+      .single();
+
+    if (error) {
+      console.error('Error creating company:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Unexpected error creating company:', err);
+    return null;
+  }
+}
+
+/**
+ * Check if user already exists by email
+ */
+async function getUserByEmail(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  email: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('email', email.toLowerCase())
+      .eq('deleted_at', null)
+      .single();
+
+    if (error) {
+      // No user found (expected error for single() when no match)
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      console.error('Error checking user by email:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Unexpected error checking user:', err);
+    return null;
+  }
+}
+
+/**
+ * Create a new user in the users table
+ */
+async function createUser(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  email: string,
+  hashedPassword: string,
+  companyId: string
+) {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .insert([
+        {
+          email: email.toLowerCase(),
+          password_hash: hashedPassword,
+          company_id: companyId,
+          role: 'admin', // First user is admin
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ])
+      .select('id, email, company_id, role, created_at')
+      .single();
+
+    if (error) {
+      console.error('Error creating user:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Unexpected error creating user:', err);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
@@ -62,7 +217,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: {
-            code: 'INVALID_CREDENTIALS',
+            code: 'INVALID_REQUEST',
             message: 'Request body must be valid JSON',
             timestamp: new Date().toISOString(),
           },
@@ -72,7 +227,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate request using Zod schema
-    const validationResult = registerRequestSchema.safeParse(body);
+    const validationResult = registerSchema.safeParse(body);
 
     if (!validationResult.success) {
       const fieldErrors = validationResult.error.flatten().fieldErrors;
@@ -84,7 +239,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: {
-            code: 'INVALID_CREDENTIALS',
+            code: 'VALIDATION_ERROR',
             message: 'Validation failed',
             details: fieldErrors,
             timestamp: new Date().toISOString(),
@@ -94,76 +249,61 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, password, firstName, lastName, acceptTerms } = validationResult.data;
+    const { email, password, company_cnpj, company_name } = validationResult.data;
 
-    // Validate that terms are accepted
-    if (!acceptTerms) {
+    // Initialize Supabase client with service role key
+    const supabase = createSupabaseServerClient();
+
+    // Step 1: Check if user already exists
+    const existingUser = await getUserByEmail(supabase, email);
+    if (existingUser) {
       return NextResponse.json(
         {
           success: false,
           error: {
-            code: 'INVALID_CREDENTIALS',
-            message: 'Terms and conditions must be accepted',
+            code: 'USER_ALREADY_EXISTS',
+            message: 'An account with this email already exists',
             timestamp: new Date().toISOString(),
           },
         },
-        { status: AUTH_STATUS_CODES.BAD_REQUEST }
+        { status: AUTH_STATUS_CODES.CONFLICT }
       );
     }
 
-    // Attempt to register user with Supabase Auth
-    const registrationResult = await registerUser(email, password, {
-      first_name: firstName,
-      last_name: lastName,
-    });
+    // Step 2: Check if company exists by CNPJ, or create new one
+    let company = await getCompanyByCNPJ(supabase, company_cnpj);
 
-    // Handle registration errors
-    if (!registrationResult.success) {
-      // Check if error is due to duplicate email
-      if (registrationResult.code === 'user_already_exists') {
+    if (!company) {
+      // Company doesn't exist, create it
+      company = await createCompany(supabase, company_cnpj, company_name);
+
+      if (!company) {
         return NextResponse.json(
           {
             success: false,
             error: {
-              code: 'USER_ALREADY_EXISTS',
-              message: 'An account with this email already exists. Please try logging in or use a different email.',
+              code: 'COMPANY_CREATION_FAILED',
+              message: 'Failed to create company',
               timestamp: new Date().toISOString(),
             },
           },
-          { status: AUTH_STATUS_CODES.CONFLICT }
+          { status: AUTH_STATUS_CODES.INTERNAL_SERVER_ERROR }
         );
       }
+    }
 
-      // Check for weak password error
-      if (registrationResult.code === 'weak_password') {
-        return NextResponse.json(
-          {
-            success: false,
-            error: {
-              code: 'WEAK_PASSWORD',
-              message: registrationResult.error || 'Password does not meet security requirements',
-              timestamp: new Date().toISOString(),
-            },
-          },
-          { status: AUTH_STATUS_CODES.UNPROCESSABLE_ENTITY }
-        );
-      }
-
-      // Generic registration error
-      console.error('User registration error:', registrationResult.error);
+    // Step 3: Hash password with bcrypt (10 salt rounds)
+    let hashedPassword: string;
+    try {
+      hashedPassword = await bcrypt.hash(password, 10);
+    } catch (err) {
+      console.error('Error hashing password:', err);
       return NextResponse.json(
         {
           success: false,
           error: {
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to create account. Please try again.',
-            details:
-              process.env.NODE_ENV === 'development'
-                ? {
-                    errorMessage: registrationResult.error,
-                    errorCode: registrationResult.code,
-                  }
-                : undefined,
+            code: 'PASSWORD_HASH_ERROR',
+            message: 'Failed to process password',
             timestamp: new Date().toISOString(),
           },
         },
@@ -171,14 +311,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate response data
-    if (!registrationResult.data || !registrationResult.data.user) {
+    // Step 4: Create user with company_id
+    const user = await createUser(supabase, email, hashedPassword, company.id);
+
+    if (!user) {
       return NextResponse.json(
         {
           success: false,
           error: {
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Failed to create account: invalid response from authentication service',
+            code: 'USER_CREATION_FAILED',
+            message: 'Failed to create user account',
             timestamp: new Date().toISOString(),
           },
         },
@@ -186,34 +328,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = registrationResult.data.user;
-    const session = registrationResult.data.session;
-
-    // Prepare user metadata
-    const userMetadata = user.user_metadata || {};
+    // Step 5: Generate JWT tokens
+    const tokenPair = generateTokenPair(
+      user.id,
+      user.company_id,
+      user.email,
+      user.role
+    );
 
     // Prepare response
-    const accessToken = session?.access_token || '';
-    const refreshToken = session?.refresh_token || '';
-    const expiresIn = accessToken ? getTokenExpiresIn(accessToken) || TOKEN_EXPIRATION.ACCESS : TOKEN_EXPIRATION.ACCESS;
-
     const response = {
       success: true as const,
       user: {
         id: user.id,
-        email: user.email || email,
-        firstName: userMetadata.first_name || firstName || undefined,
-        lastName: userMetadata.last_name || lastName || undefined,
-        roles: userMetadata.roles ? [userMetadata.roles].flat() : ['user'],
-        createdAt: user.created_at || new Date().toISOString(),
-        updatedAt: user.updated_at || new Date().toISOString(),
+        email: user.email,
+        company_id: user.company_id,
+        role: user.role,
+        created_at: user.created_at,
       },
-      tokens: {
-        accessToken,
-        refreshToken,
-        expiresIn,
-        tokenType: 'Bearer' as const,
-      },
+      token: tokenPair,
     };
 
     // Create response with cookies
@@ -222,10 +355,10 @@ export async function POST(request: NextRequest) {
     });
 
     // Set refresh token in HTTP-only cookie
-    if (refreshToken) {
+    if (tokenPair.refreshToken) {
       jsonResponse.cookies.set({
         name: 'refresh_token',
-        value: refreshToken,
+        value: tokenPair.refreshToken,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -235,14 +368,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Set access token in non-HTTP-only cookie for client access
-    if (accessToken) {
+    if (tokenPair.accessToken) {
       jsonResponse.cookies.set({
         name: 'access_token',
-        value: accessToken,
+        value: tokenPair.accessToken,
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: expiresIn,
+        maxAge: tokenPair.expiresIn,
         path: '/',
       });
     }

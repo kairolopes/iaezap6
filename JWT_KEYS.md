@@ -1,0 +1,41 @@
+﻿# JWT RS256 Key Pair
+
+Generated on: 2026-08-13 14:29:39
+
+## Private Key (DO NOT SHARE)
+
+Use this in your .env.local as JWT_PRIVATE_KEY
+
+\\\
+-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCqMhmm42D34rVM\n9NP1JydBVPVwq8/4yw9BWV4AwdwTS0t7fEbPYaW4nDJ3sSL/8wS/AJlrmxW4tbYj\nN/99d1ENY1ju+g5W4caP+WZ+syEpBbJlOy/M+QT4ApYTXp4PKku35UquWMYGZfLV\nZIeggTxax/+4LnB46H+KcjnpFz5HDiOHebfJ6wljuMZUUFijOdHcQVh28uHHBA/E\nDb5S3vFZiKcgq2CU/tcN0uyumIHtGXKjKJteqr13GLgAh/aZZTdFkOviPM18dHJS\nPSHUjbe5zbRdUurrtXHcLttTTdBkj8r7iXSOobUUkxKf0dvWeukYMlRhgMav+OUP\nqMYozE+nAgMBAAECggEABY/Q53OYxfZXpxB9I2Qd0/RlzO0gb73wXVoBSL8ND72v\nKsrl5ChfFQhYXIb3tiuH5Sys1tJg7wH+gL93ZESTln9qTEJJrlcpzlH/zSDSHZgS\nZgfSyRJTh5NLZONRAP0zL5WY+izr07uzKCa6iT6P7VuJz3KyZDvHfIu9Drv0DLhW\nLYMSpubXB8vbc3OXavZA4RCWX13HYrKyynU3v0ujLmuWNWWtgeBhHd6AlLPJxX3e\neRccp5E2nn4Orn3F5zwBmmhi/Imrsk+5WEdb+YdnUNabt11sP/TlQHvQClzbbDy7\n9t1uUKHMr56/0A1MsHvsN+YCbn5ShqZu/0Lrx6cqWQKBgQDoBYrw7yGCW5km32Hq\n8fwUoGCXfkLiqFb/6uTfRS1fzVhqAWGv2j68vRfqXHx4uU6wnk1iz9ntCKX+Czcf\nfdT955qIhYEuz0pR8SwLzhUq5Utw8i6EDmJ8GnwE6jbqJQi1lkXCT4B62i3jA7yL\neytX4RSZDqpCFQsx+myAlwX1iwKBgQC7yN2Vkfj9fh24e2GN8KIL43KIKK6NTqN7\nDP8CnO2Ol5yUgLiMfAyGbFktXjfKafvFSoOYBgGFhPWDvoPp1WiEyGNQuV9Fvvbt\nf2JCL6oik33vCAhbixFkHro5zRxsbsOpqhuryMdCvpYuwcM5wD47DaaY9R0UfIg3\n4XzGW4Np1QKBgEbbGnlFregPbQ/v/Akx6RerepQJHQf2/Mqew1Jj39136l5FGb4I\nWkxtOtZ5dBGyFZPeZCee7iBzGa4hYq4dUWRQzGKQ0simyT2I9ziLsO8uowFVFFuD\nwRPBSsp9dFPBB43c3GTgvo3F/2lqhLPb43qs5Atx7RDNOGQE5AnJFSrNAoGADob1\njXKjfojZJ8Jzw5VQE/dejuYGyuvAfe59c+hMAHH+LQbgQA4Asg2DwJy/WCtmzNZ8\n46/jQj8M90ovzlEyKsON21rb4ftqAumN4mzpjo82eN14OAzEJaiy43HYtxLClEeS\nqHF56NHxsGBRCBC1P8BImSCtRT51E02gZ4AA5JkCgYBg9lmFGOLIOpwvuDdkPV0P\ngM5kNpjb5I+Rj/VFIsiio3DnC15k/yzj9NXk9Zrg2oV3pf9Ok916nLTFrVUHjTAJ\n4ePE3q1inKFskw5zbQJdMHeQqWh0kBXl0vSnf9qLfozm+R+4u/FUA2EwonN/lsUS\nmEuPVDXc672aqKy57jUlqA==\n-----END PRIVATE KEY-----\n
+\\\
+
+## Public Key
+
+Use this in your .env.local as JWT_PUBLIC_KEY
+
+\\\
+-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqjIZpuNg9+K1TPTT9Scn\nQVT1cKvP+MsPQVleAMHcE0tLe3xGz2GluJwyd7Ei//MEvwCZa5sVuLW2Izf/fXdR\nDWNY7voOVuHGj/lmfrMhKQWyZTsvzPkE+AKWE16eDypLt+VKrljGBmXy1WSHoIE8\nWsf/uC5weOh/inI56Rc+Rw4jh3m3yesJY7jGVFBYoznR3EFYdvLhxwQPxA2+Ut7x\nWYinIKtglP7XDdLsrpiB7RlyoyibXqq9dxi4AIf2mWU3RZDr4jzNfHRyUj0h1I23\nuc20XVLq67Vx3C7bU03QZI/K+4l0jqG1FJMSn9Hb1nrpGDJUYYDGr/jlD6jGKMxP\npwIDAQAB\n-----END PUBLIC KEY-----\n
+\\\
+
+## Environment Variables Format
+
+Add these to your .env.local file:
+
+### Private Key (single line with \n escape sequences)
+\\\
+JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCqMhmm42D34rVM\n9NP1JydBVPVwq8/4yw9BWV4AwdwTS0t7fEbPYaW4nDJ3sSL/8wS/AJlrmxW4tbYj\nN/99d1ENY1ju+g5W4caP+WZ+syEpBbJlOy/M+QT4ApYTXp4PKku35UquWMYGZfLV\nZIeggTxax/+4LnB46H+KcjnpFz5HDiOHebfJ6wljuMZUUFijOdHcQVh28uHHBA/E\nDb5S3vFZiKcgq2CU/tcN0uyumIHtGXKjKJteqr13GLgAh/aZZTdFkOviPM18dHJS\nPSHUjbe5zbRdUurrtXHcLttTTdBkj8r7iXSOobUUkxKf0dvWeukYMlRhgMav+OUP\nqMYozE+nAgMBAAECggEABY/Q53OYxfZXpxB9I2Qd0/RlzO0gb73wXVoBSL8ND72v\nKsrl5ChfFQhYXIb3tiuH5Sys1tJg7wH+gL93ZESTln9qTEJJrlcpzlH/zSDSHZgS\nZgfSyRJTh5NLZONRAP0zL5WY+izr07uzKCa6iT6P7VuJz3KyZDvHfIu9Drv0DLhW\nLYMSpubXB8vbc3OXavZA4RCWX13HYrKyynU3v0ujLmuWNWWtgeBhHd6AlLPJxX3e\neRccp5E2nn4Orn3F5zwBmmhi/Imrsk+5WEdb+YdnUNabt11sP/TlQHvQClzbbDy7\n9t1uUKHMr56/0A1MsHvsN+YCbn5ShqZu/0Lrx6cqWQKBgQDoBYrw7yGCW5km32Hq\n8fwUoGCXfkLiqFb/6uTfRS1fzVhqAWGv2j68vRfqXHx4uU6wnk1iz9ntCKX+Czcf\nfdT955qIhYEuz0pR8SwLzhUq5Utw8i6EDmJ8GnwE6jbqJQi1lkXCT4B62i3jA7yL\neytX4RSZDqpCFQsx+myAlwX1iwKBgQC7yN2Vkfj9fh24e2GN8KIL43KIKK6NTqN7\nDP8CnO2Ol5yUgLiMfAyGbFktXjfKafvFSoOYBgGFhPWDvoPp1WiEyGNQuV9Fvvbt\nf2JCL6oik33vCAhbixFkHro5zRxsbsOpqhuryMdCvpYuwcM5wD47DaaY9R0UfIg3\n4XzGW4Np1QKBgEbbGnlFregPbQ/v/Akx6RerepQJHQf2/Mqew1Jj39136l5FGb4I\nWkxtOtZ5dBGyFZPeZCee7iBzGa4hYq4dUWRQzGKQ0simyT2I9ziLsO8uowFVFFuD\nwRPBSsp9dFPBB43c3GTgvo3F/2lqhLPb43qs5Atx7RDNOGQE5AnJFSrNAoGADob1\njXKjfojZJ8Jzw5VQE/dejuYGyuvAfe59c+hMAHH+LQbgQA4Asg2DwJy/WCtmzNZ8\n46/jQj8M90ovzlEyKsON21rb4ftqAumN4mzpjo82eN14OAzEJaiy43HYtxLClEeS\nqHF56NHxsGBRCBC1P8BImSCtRT51E02gZ4AA5JkCgYBg9lmFGOLIOpwvuDdkPV0P\ngM5kNpjb5I+Rj/VFIsiio3DnC15k/yzj9NXk9Zrg2oV3pf9Ok916nLTFrVUHjTAJ\n4ePE3q1inKFskw5zbQJdMHeQqWh0kBXl0vSnf9qLfozm+R+4u/FUA2EwonN/lsUS\nmEuPVDXc672aqKy57jUlqA==\n-----END PRIVATE KEY-----\n"
+\\\
+
+### Public Key (single line with \n escape sequences)
+\\\
+JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqjIZpuNg9+K1TPTT9Scn\nQVT1cKvP+MsPQVleAMHcE0tLe3xGz2GluJwyd7Ei//MEvwCZa5sVuLW2Izf/fXdR\nDWNY7voOVuHGj/lmfrMhKQWyZTsvzPkE+AKWE16eDypLt+VKrljGBmXy1WSHoIE8\nWsf/uC5weOh/inI56Rc+Rw4jh3m3yesJY7jGVFBYoznR3EFYdvLhxwQPxA2+Ut7x\nWYinIKtglP7XDdLsrpiB7RlyoyibXqq9dxi4AIf2mWU3RZDr4jzNfHRyUj0h1I23\nuc20XVLq67Vx3C7bU03QZI/K+4l0jqG1FJMSn9Hb1nrpGDJUYYDGr/jlD6jGKMxP\npwIDAQAB\n-----END PUBLIC KEY-----\n"
+\\\
+
+## Security Notes
+
+- Store the private key securely - do NOT commit to git
+- Add JWT_KEYS.md to .gitignore if sensitive data is exposed
+- The keys are for RS256 (RSA with SHA-256) JWT signing
+- Private key should only be used for signing
+- Public key can be shared for verification
