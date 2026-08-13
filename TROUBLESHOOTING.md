@@ -2403,7 +2403,89 @@ Per https://developer.z-api.io/message/introduction:
 4. If still no webhook, contact Z-API support
 
 ### Status
-🔄 AWAITING - Z-API configuration verification required
+✅ **FULLY RESOLVED** - Webhook integration complete and production-ready!
+
+---
+
+## Problem 33: Z-API Webhook Response Format and Payload Mapping
+**Date**: 2026-08-13
+**Severity**: CRITICAL
+**Error**: `Invalid discriminator value` and `Invalid input: expected string, received object`
+
+### Root Cause FOUND! 🎯
+
+**Issue 1: Wrong Response Format**
+- Z-API expects response: `{"value": true}`
+- Not: `{"success": true, ...}`
+
+**Issue 2: Z-API Payload Format Different from Schema**
+- Z-API sends: `{"status": "RECEIVED", "text": {"message": "..."}, ...}` (no `type` field!)
+- Schema expected: `{"type": "receive", "text": "string", ...}`
+- This is the ACTUAL Z-API webhook format, not what documentation examples showed
+
+### Solution
+
+**1. Changed response format:**
+```typescript
+return NextResponse.json({ value: true }, { status: 200 });
+```
+
+**2. Created simple webhook endpoint without dynamic parameters:**
+- Route: `/api/webhooks/z-api/receive` (instead of complex `/instances/[id]/token/[token]`)
+- Z-API format doesn't pass path parameters in standard way
+
+**3. Implemented payload mapping:**
+```typescript
+// Map Z-API's "status" to our event "type"
+if (payload.status === 'RECEIVED') {
+  event = {
+    type: 'receive',
+    timestamp: payload.momment,
+    messageId: payload.messageId,
+    senderPhone: payload.phone,
+    senderName: payload.senderName,
+    messageType: 'text',
+    text: payload.text?.message || payload.text || '',  // Extract from nested object
+    phone: payload.connectedPhone,
+    id: payload.instanceId,
+  };
+}
+```
+
+**4. Configure in Z-API Dashboard:**
+```
+Webhook URL: https://iaezap.com.br/api/webhooks/z-api/receive
+```
+
+### Final Test Result ✅
+
+Successfully received and processed multiple real WhatsApp messages:
+
+```
+Message 1: "Isso mesmo"
+[Webhook Processed Successfully] {
+  conversationId: '501ac001-f1a3-464a-9f51-d9a615ca2b63',
+  messageId: '2608adf8-7140-4616-b1db-8ef651ea0382',
+  action: 'message_received'
+}
+
+Message 2: "Claro"
+[Webhook Processed Successfully] {
+  conversationId: '501ac001-f1a3-464a-9f51-d9a615ca2b63',
+  messageId: 'f091866f-9365-466e-bc09-4393a04333bc',
+  action: 'message_received'
+}
+
+Message 3: "Jovem"
+[Webhook Processed Successfully] {
+  conversationId: '501ac001-f1a3-464a-9f51-d9a615ca2b63',
+  messageId: 'c193ca95-d945-4726-9319-47001ac7f484',
+  action: 'message_received'
+}
+```
+
+### Status
+✅ **PRODUCTION READY** - Z-API webhook integration complete and fully functional!
 
 ---
 
