@@ -1561,6 +1561,9 @@ Z-API pode não estar realmente RECEBENDO as mensagens, não apenas não enviand
 2. ✅ "Ignorar mensagens de chats privados" - Confirmado como OFF
 3. ✅ "Ignorar mensagens de texto" - Confirmado como OFF
 4. ✅ Firewall/DNS - iaezap.com.br é acessível
+5. ✅ Histórico de mensagens Z-API - **NÃO DISPONÍVEL** (Z-API não tem histórico)
+6. ✅ Z-API está recebendo mensagens? - **DESCONHECIDO** (sem histórico, impossível verificar)
+7. ✅ MCP Z-API - Lido documentação (apenas para ENVIAR, não RECEBER)
 
 ### Conclusão Final
 **IAeZap System:** ✅ 100% Funcional
