@@ -105,36 +105,48 @@ export default function DashboardPage() {
             title="Dashboard"
             description="Visualize estatísticas e métricas do seu negócio"
             status="Pronto"
+            onClick={() => {}}
           />
           <FeatureCard
             icon="👥"
             title="Gerenciamento de Usuários"
             description="Crie e gerencie usuários da sua empresa"
             status="Pronto"
+            onClick={() => {
+              try {
+                window.location.href = '/dashboard/users';
+              } catch (e) {
+                console.error('Erro ao navegar:', e);
+              }
+            }}
           />
           <FeatureCard
             icon="💬"
             title="Integração Z-API"
             description="Receba e envie mensagens WhatsApp automaticamente"
             status="Ativo"
+            onClick={() => {}}
           />
           <FeatureCard
             icon="🔧"
             title="Admin Panel"
             description="Painel administrativo para gerenciar empresas"
             status="Disponível"
+            onClick={() => {}}
           />
           <FeatureCard
             icon="📱"
             title="Webhook Receiver"
             description="Receba eventos e webhooks do Z-API"
             status="Ativo"
+            onClick={() => {}}
           />
           <FeatureCard
             icon="🔐"
             title="Autenticação JWT"
             description="Autenticação segura com RS256 e refresh tokens"
             status="Ativo"
+            onClick={() => {}}
           />
         </div>
 
@@ -183,9 +195,32 @@ curl -X GET http://localhost:3000/api/admin/users \\
   );
 }
 
-function FeatureCard({ icon, title, description, status }: any) {
+function FeatureCard({ icon, title, description, status, onClick }: any) {
   return (
-    <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+    <div
+      onClick={onClick}
+      style={{
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.2s ease',
+        transform: onClick ? 'scale(1)' : 'scale(1)',
+      }}
+      onMouseEnter={(e) => {
+        if (onClick) {
+          e.currentTarget.style.transform = 'scale(1.02)';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (onClick) {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        }
+      }}
+    >
       <div style={{ fontSize: '28px', marginBottom: '8px' }}>{icon}</div>
       <h4 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>{title}</h4>
       <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>{description}</p>
