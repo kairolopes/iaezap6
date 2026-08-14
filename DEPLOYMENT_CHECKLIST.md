@@ -1,972 +1,410 @@
-# IAeZap Deployment Checklist
+# ✅ IAEZAP - CHECKLIST DE DEPLOYMENT NA HOSTINGER
 
-Comprehensive checklist for deploying IAeZap to production. Use this guide to verify all components are properly configured before going live.
-
-## Table of Contents
-
-1. [Pre-Deployment Environment Setup](#pre-deployment-environment-setup)
-2. [Code Quality & Testing](#code-quality--testing)
-3. [Security Configuration](#security-configuration)
-4. [Database Setup](#database-setup)
-5. [Authentication & Authorization](#authentication--authorization)
-6. [API Configuration](#api-configuration)
-7. [Webhook Configuration](#webhook-configuration)
-8. [Monitoring & Logging](#monitoring--logging)
-9. [Performance Optimization](#performance-optimization)
-10. [Load Testing](#load-testing)
-11. [Backup & Disaster Recovery](#backup--disaster-recovery)
-12. [Documentation & Knowledge Transfer](#documentation--knowledge-transfer)
-13. [Deployment Execution](#deployment-execution)
-14. [Post-Deployment Verification](#post-deployment-verification)
+## 🎯 OBJETIVO FINAL
+Colocar IAeZap em produção em jotaonline.com.br na Hostinger
 
 ---
 
-## Pre-Deployment Environment Setup
+## 📋 PRÉ-DEPLOYMENT (Local)
 
-### Server Infrastructure
+### Preparação do Código
+- [ ] Código testado localmente (`npm run dev` funcionando)
+- [ ] Variáveis de ambiente (.env.local) corretas
+- [ ] Build local funciona (`npm run build`)
+- [ ] Sem erros no console
+- [ ] Repositório Git criado (GitHub/GitLab)
+- [ ] Código commitado e pusheado para `main` branch
 
-- [ ] Production server provisioned (AWS EC2, Vercel, Heroku, etc.)
-- [ ] Server meets minimum requirements:
-  - [ ] Node.js 18+ installed
-  - [ ] npm or yarn available
-  - [ ] 2+ CPU cores
-  - [ ] 2GB+ RAM minimum (4GB recommended)
-  - [ ] 20GB+ disk space
-- [ ] Server security groups configured
-  - [ ] HTTPS (port 443) accessible
-  - [ ] HTTP (port 80) for redirects only
-  - [ ] SSH access (port 22) restricted to known IPs
-  - [ ] Database access restricted to app server
-- [ ] SSL/TLS certificate installed and valid
-  - [ ] Certificate from trusted CA (Let's Encrypt, DigiCert, etc.)
-  - [ ] Certificate covers all required domains
-  - [ ] Certificate expires > 30 days away
-  - [ ] Auto-renewal configured
+### Verificações Finais
+- [ ] Supabase credenciais confirmadas
+- [ ] JWT keys privada/pública geradas
+- [ ] Banco de dados migrado
+- [ ] Master user criado
+- [ ] Z-API configurado (opcional para launch)
 
-### Domain & DNS
+---
 
-- [ ] Primary domain configured
-  - [ ] DNS A record points to server IP
-  - [ ] DNS MX records configured (if email needed)
-  - [ ] CNAME records for CDN configured
-- [ ] SSL certificate issued for domain
-- [ ] DNS TTL set appropriately (300-3600 seconds)
-- [ ] CNAME aliases configured for subdomains
-  - [ ] `api.domain.com` configured
-  - [ ] `admin.domain.com` configured
-  - [ ] `webhooks.domain.com` configured (optional)
+## 🔧 PASSO 1: HOSTINGER SETUP
 
-### Environment Variables
+### Contratação VPS
+- [ ] VPS 2GB RAM contratada
+- [ ] Ubuntu 22.04 LTS selecionado
+- [ ] IP do servidor recebido via email
+- [ ] Senha root recebida
 
-Production `.env.production` file prepared with:
+### Primeiro Acesso
+- [ ] SSH funcionando
+- [ ] Conectado ao servidor
+- [ ] Comando `whoami` retorna `root`
 
+---
+
+## 2️⃣ PASSO 2: PREPARAR SERVIDOR
+
+### Atualizar Sistema
 ```bash
-# ============================================================================
-# ENVIRONMENT
-# ============================================================================
-NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://your-domain.com
-
-# ============================================================================
-# DATABASE
-# ============================================================================
-NEXT_PUBLIC_SUPABASE_URL=https://[project].supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-
-# ============================================================================
-# JWT CONFIGURATION
-# ============================================================================
-# Generated via: npm run generate-jwt-keys
-# Store these securely - never commit to Git!
-PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
-PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
-JWT_ALGORITHM=RS256
-JWT_EXPIRATION=900
-JWT_REFRESH_EXPIRATION=604800
-
-# ============================================================================
-# Z-API CONFIGURATION
-# ============================================================================
-Z_API_TOKEN=your-z-api-token-here
-Z_API_BASE_URL=https://api.z-api.io
-Z_API_INSTANCE_ID=your-instance-id
-
-# ============================================================================
-# SECURITY
-# ============================================================================
-WEBHOOK_SECRET=generate-random-secret-key
-CORS_ORIGIN=https://your-domain.com
-RATE_LIMIT_WINDOW=60000
-RATE_LIMIT_MAX_REQUESTS=100
-
-# ============================================================================
-# LOGGING
-# ============================================================================
-LOG_LEVEL=info
-SENTRY_DSN=https://...@sentry.io/...
+apt update && apt upgrade -y
 ```
-
-Verification checklist:
-
-- [ ] All required environment variables set
-- [ ] No hardcoded secrets in code
-- [ ] All URLs use HTTPS
-- [ ] JWT keys are unique to production
-- [ ] Z-API token is production token (not staging)
-- [ ] CORS origin matches domain
-- [ ] Environment variables stored securely (not in version control)
-
----
-
-## Code Quality & Testing
-
-### Linting & Formatting
-
-- [ ] ESLint passes without warnings
-  ```bash
-  npm run lint
-  ```
-- [ ] No TypeScript compilation errors
-  ```bash
-  npx tsc --noEmit
-  ```
-- [ ] Code formatted consistently
-  ```bash
-  npx prettier --check .
-  ```
-
-### Unit Tests
-
-- [ ] All unit tests pass
-  ```bash
-  npm test
-  ```
-- [ ] Test coverage >= 80%
-  ```bash
-  npm run test:coverage
-  ```
-- [ ] Critical authentication paths tested
-  - [ ] Login flow
-  - [ ] Token generation
-  - [ ] Token refresh
-  - [ ] Logout
-- [ ] Critical database operations tested
-  - [ ] User creation
-  - [ ] Company creation
-  - [ ] Multi-tenant isolation
-
-### Integration Tests
-
-- [ ] Multi-tenant tests pass
-  ```bash
-  npm run test:multi-tenant
-  ```
-- [ ] End-to-end tests pass
-  ```bash
-  npm run test:e2e
-  ```
-- [ ] Webhook processing tested
-  - [ ] Message receive event
-  - [ ] Message delivery event
-  - [ ] Connection status event
-- [ ] API endpoint tests
-  - [ ] Authentication endpoints
-  - [ ] Admin endpoints
-  - [ ] Company endpoints
-
-### Build Testing
-
-- [ ] Production build succeeds
-  ```bash
-  npm run build
-  ```
-- [ ] No build warnings
-- [ ] Bundle size acceptable
-  - [ ] Main bundle < 500KB
-  - [ ] Total JS < 1MB
-- [ ] Build artifacts correct
-  - [ ] `.next/` directory generated
-  - [ ] No source maps in production
-  - [ ] Assets minified
-
----
-
-## Security Configuration
-
-### Credentials & Keys
-
-- [ ] JWT private key securely stored
-  - [ ] Not in Git repository
-  - [ ] Stored in secrets manager (AWS Secrets Manager, HashiCorp Vault, etc.)
-  - [ ] Different from development key
-  - [ ] Rotation plan established
-- [ ] JWT public key available in app
-- [ ] Z-API token secured
-  - [ ] Stored in secrets manager
-  - [ ] Rotated every 90 days
-  - [ ] Webhook secret set
-- [ ] Database credentials secured
-  - [ ] Not exposed in error messages
-  - [ ] Database user has minimal permissions
-  - [ ] Regular password rotation planned
-
-### Network Security
-
-- [ ] HTTPS enforced
-  ```bash
-  # Redirect HTTP to HTTPS
-  X-Forwarded-Proto: https
-  Strict-Transport-Security: max-age=31536000
-  ```
-- [ ] CORS properly configured
-  ```typescript
-  // Only allow your domain
-  Access-Control-Allow-Origin: https://your-domain.com
-  ```
-- [ ] Rate limiting configured
-  - [ ] Login: 5 attempts per 15 minutes
-  - [ ] API: 100 requests per minute per user
-- [ ] API key rotation plan established
-- [ ] Webhook IP whitelist configured (Z-API IPs)
-
-### Application Security
-
-- [ ] Password validation enforced
-  - [ ] Minimum 8 characters
-  - [ ] Mixed case required
-  - [ ] Numbers required
-  - [ ] Special characters required
-- [ ] Input validation on all endpoints
-  - [ ] Zod schemas applied
-  - [ ] No SQL injection vulnerabilities
-  - [ ] No XSS vulnerabilities
-- [ ] Authentication properly implemented
-  - [ ] JWT tokens verified on protected routes
-  - [ ] Refresh token rotation implemented
-  - [ ] Token expiration enforced
-- [ ] Authorization checks enforced
-  - [ ] Role-based access control (RBAC) working
-  - [ ] Multi-tenant isolation verified
-  - [ ] Admin endpoints require admin role
-- [ ] Error messages don't leak sensitive info
-  - [ ] Database errors masked
-  - [ ] Stack traces not exposed in production
-  - [ ] Implementation details hidden
-- [ ] Security headers configured
-  ```
-  X-Content-Type-Options: nosniff
-  X-Frame-Options: DENY
-  X-XSS-Protection: 1; mode=block
-  Content-Security-Policy: default-src 'self'
-  ```
-
----
-
-## Database Setup
-
-### Supabase Configuration
-
-- [ ] Production Supabase project created
-- [ ] Database backups enabled
-  - [ ] Daily automated backups
-  - [ ] 30-day retention minimum
-  - [ ] Backup restore tested
-- [ ] Database users created with minimal permissions
-  - [ ] Application user (SELECT, INSERT, UPDATE, DELETE)
-  - [ ] Read-only user for reporting
-  - [ ] Admin user (restricted access)
-- [ ] Row Level Security (RLS) policies applied
-  - [ ] Users can only see their company's data
-  - [ ] Admins can manage their company's users
-  - [ ] Messages isolated by company
-
-### Database Migrations
-
-- [ ] All migrations applied
-  ```bash
-  supabase migration up
-  ```
-- [ ] Tables created with correct schema
-  - [ ] companies table
-  - [ ] users table
-  - [ ] z_api_instances table
-  - [ ] z_api_messages table
-  - [ ] audit_logs table
-- [ ] Indexes created for performance
-  - [ ] company_id indexes on all tables
-  - [ ] email indexes on users
-  - [ ] message_id indexes on messages
-  - [ ] created_at indexes for sorting
-- [ ] Foreign key constraints verified
-- [ ] Unique constraints configured
-  - [ ] email unique within company
-  - [ ] cnpj unique for companies
-  - [ ] message_id unique
-
-### Database Performance
-
-- [ ] Query optimization completed
-  - [ ] N+1 queries eliminated
-  - [ ] Indexes properly used
-  - [ ] Query execution plans reviewed
-- [ ] Connection pooling configured
-  - [ ] Maximum connections set
-  - [ ] Connection timeout configured
-  - [ ] Idle connection cleanup enabled
-- [ ] Database monitoring enabled
-  - [ ] Slow query log configured
-  - [ ] Query performance monitored
-  - [ ] Lock monitoring enabled
-
----
-
-## Authentication & Authorization
-
-### JWT Configuration
-
-- [ ] RS256 algorithm configured
-- [ ] Private key securely stored
-- [ ] Public key distributed to app
-- [ ] Token expiration set
-  - [ ] Access token: 15 minutes
-  - [ ] Refresh token: 7 days
-  - [ ] Password reset token: 1 hour
-- [ ] Token verification working
-  - [ ] Signature validation working
-  - [ ] Expiration checked
-  - [ ] Token blacklist implemented
-
-### Password Security
-
-- [ ] bcrypt hashing configured
-  - [ ] Cost factor: 10+
-  - [ ] Unique salts per password
-- [ ] Password requirements enforced
-  - [ ] Minimum length: 8 characters
-  - [ ] Character variety required
-  - [ ] Common passwords rejected
-- [ ] Password reset flow working
-  - [ ] Reset token generation
-  - [ ] Email delivery configured
-  - [ ] Token expiration (1 hour)
-
-### Multi-Tenant Isolation
-
-- [ ] User-company relationships enforced
-- [ ] Company ID included in JWT tokens
-- [ ] All queries filtered by company_id
-- [ ] Role-based access control working
-  - [ ] Admin role
-  - [ ] Moderator role
-  - [ ] User role
-- [ ] Audit logs created for sensitive actions
-  - [ ] User creation/deletion
-  - [ ] Role changes
-  - [ ] Admin actions
-
----
-
-## API Configuration
-
-### CORS Configuration
-
-- [ ] CORS properly configured
-  ```typescript
-  Access-Control-Allow-Origin: https://your-domain.com
-  Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
-  Access-Control-Allow-Headers: Content-Type, Authorization
-  Access-Control-Max-Age: 86400
-  ```
-- [ ] Credentials included in CORS headers
-- [ ] Preflight requests handled
-
-### Rate Limiting
-
-- [ ] Rate limiter middleware configured
-- [ ] Rate limits per endpoint:
-  - [ ] `/api/auth/login`: 5 requests per 15 minutes per IP
-  - [ ] `/api/auth/register`: 3 requests per 1 hour per IP
-  - [ ] `/api/admin/*`: 100 requests per minute per user
-  - [ ] `/api/messages/*`: 500 requests per minute per user
-- [ ] Rate limit headers in responses
-  - [ ] RateLimit-Limit
-  - [ ] RateLimit-Remaining
-  - [ ] RateLimit-Reset
-
-### Request/Response Handling
-
-- [ ] Request body size limits configured
-  - [ ] JSON: 1MB max
-  - [ ] Form data: 10MB max
-- [ ] Request timeout configured
-  - [ ] Timeout: 30 seconds
-  - [ ] Graceful timeout handling
-- [ ] Response compression enabled
-  - [ ] gzip enabled
-  - [ ] Compression level 6+
-- [ ] Response caching configured
-  - [ ] Cache-Control headers set
-  - [ ] ETags generated
-  - [ ] 304 Not Modified responses
-
----
-
-## Webhook Configuration
-
-### Z-API Webhook Setup
-
-- [ ] Webhook endpoint configured in Z-API dashboard
-  ```
-  https://your-domain.com/api/webhooks/z-api/receive
-  ```
-- [ ] Webhook events enabled:
-  - [ ] Message Received (RECEIVED)
-  - [ ] Message Delivered (DELIVERED)
-  - [ ] Message Status (STATUS)
-  - [ ] Connection Disconnected (DISCONNECTED)
-- [ ] Webhook signature verification enabled
-  - [ ] Signature included in Z-API requests
-  - [ ] Signature validation implemented
-  - [ ] Invalid signatures rejected
-- [ ] Webhook retry policy configured
-  - [ ] Retry on timeout: Yes
-  - [ ] Max retries: 3
-  - [ ] Retry backoff: Exponential
-
-### Webhook Processing
-
-- [ ] Webhook event validation working
-  - [ ] Zod schema validation
-  - [ ] Unknown fields rejected
-  - [ ] Required fields enforced
-- [ ] Idempotency implemented
-  - [ ] Message deduplication by message_id
-  - [ ] Duplicate processing prevented
-- [ ] Async processing configured
-  - [ ] Webhooks return 200 immediately
-  - [ ] Processing done in background
-  - [ ] Failed processing retried
-- [ ] Webhook logging configured
-  - [ ] All webhooks logged
-  - [ ] Event details captured
-  - [ ] Processing status tracked
-
-### Webhook Resilience
-
-- [ ] Database transaction handling
-  - [ ] Message stored atomically
-  - [ ] Partial failures prevented
-- [ ] Error handling and recovery
-  - [ ] Failed webhooks logged
-  - [ ] Alerts triggered for critical failures
-  - [ ] Manual intervention process documented
-- [ ] Monitoring for webhook issues
-  - [ ] Delivery success rate tracked
-  - [ ] Processing latency monitored
-  - [ ] Alerts for high failure rate
-
----
-
-## Monitoring & Logging
-
-### Logging Configuration
-
-- [ ] Logging service configured (e.g., Sentry, LogRocket)
-- [ ] Log levels configured
-  - [ ] ERROR: All errors captured
-  - [ ] WARN: Warnings logged
-  - [ ] INFO: Important events
-  - [ ] DEBUG: Development debugging only
-- [ ] Sensitive data redacted
-  - [ ] Passwords not logged
-  - [ ] Tokens not logged
-  - [ ] Personal information masked
-- [ ] Log retention configured
-  - [ ] Minimum 30 days
-  - [ ] Searchable for compliance
-
-### Application Monitoring
-
-- [ ] Application monitoring service configured
-  - [ ] Sentry or similar
-  - [ ] Error tracking enabled
-  - [ ] Performance monitoring enabled
-- [ ] Error tracking working
-  - [ ] Exceptions captured
-  - [ ] Stack traces recorded
-  - [ ] Context preserved
-  - [ ] Alerts configured
-- [ ] Performance metrics tracked
-  - [ ] API response times
-  - [ ] Database query times
-  - [ ] CPU and memory usage
-  - [ ] Error rates
-
-### Database Monitoring
-
-- [ ] Database monitoring enabled
-  - [ ] Query performance tracked
-  - [ ] Slow query log configured
-  - [ ] Lock monitoring enabled
-- [ ] Database alerts configured
-  - [ ] High CPU usage alert
-  - [ ] Connection limit alert
-  - [ ] Disk space alert
-- [ ] Database health checks running
-  - [ ] Regular connectivity checks
-  - [ ] Query performance baselines
-
-### Infrastructure Monitoring
-
-- [ ] Server monitoring enabled
-  - [ ] CPU usage monitored
-  - [ ] Memory usage monitored
-  - [ ] Disk space monitored
-  - [ ] Network bandwidth monitored
-- [ ] Infrastructure alerts configured
-  - [ ] CPU > 80% alert
-  - [ ] Memory > 85% alert
-  - [ ] Disk > 90% alert
-- [ ] Uptime monitoring
-  - [ ] HTTP health check endpoints
-  - [ ] Response time monitoring
-  - [ ] Availability percentage tracked
-
----
-
-## Performance Optimization
-
-### Frontend Optimization
-
-- [ ] Next.js static generation optimized
-  - [ ] Static pages cached
-  - [ ] ISR (Incremental Static Regeneration) configured
-  - [ ] Cache headers set correctly
-- [ ] Asset optimization
-  - [ ] Images optimized (WebP, lazy loading)
-  - [ ] JavaScript minified
-  - [ ] CSS minified
-  - [ ] Bundle size < 500KB main
-- [ ] CDN configured
-  - [ ] Static assets served via CDN
-  - [ ] Cache headers configured
-  - [ ] Compression enabled
-
-### API Optimization
-
-- [ ] API response times optimized
-  - [ ] Database queries optimized
-  - [ ] N+1 queries eliminated
-  - [ ] Proper indexing in place
-- [ ] Caching strategy implemented
-  - [ ] Response caching headers
-  - [ ] Database query caching
-  - [ ] Redis cache configured (if needed)
-- [ ] Query optimization
-  - [ ] Only required fields selected
-  - [ ] Pagination implemented
-  - [ ] Filtering implemented efficiently
-
-### Server Optimization
-
-- [ ] Server compression enabled
-  - [ ] gzip enabled
-  - [ ] Brotli enabled (if supported)
-- [ ] Connection pooling configured
-  - [ ] Database connections pooled
-  - [ ] Maximum pool size configured
-- [ ] Memory optimization
-  - [ ] Node.js heap size configured
-  - [ ] Memory leaks tested for
-  - [ ] Garbage collection monitored
-
----
-
-## Load Testing
-
-### Load Test Setup
-
-- [ ] Load testing tool selected (k6, Artillery, JMeter)
-- [ ] Test scenarios defined
-  - [ ] User registration
-  - [ ] User login
-  - [ ] API calls (list users, send message)
-  - [ ] Webhook processing
-- [ ] Load test executed
-  - [ ] 100 concurrent users
-  - [ ] Ramp-up period: 5 minutes
-  - [ ] Test duration: 30 minutes
-  - [ ] Success rate tracked
-
-### Load Test Results
-
-- [ ] Load test results analyzed
-  - [ ] P95 response time < 500ms
-  - [ ] P99 response time < 1000ms
-  - [ ] Success rate > 99.5%
-  - [ ] Error rate < 0.5%
-- [ ] Database performance under load
-  - [ ] Connection pool not exhausted
-  - [ ] Query times acceptable
-  - [ ] No deadlocks detected
-- [ ] Server resource usage under load
-  - [ ] CPU < 80%
-  - [ ] Memory < 85%
-  - [ ] Disk I/O acceptable
-  - [ ] Network bandwidth acceptable
-
-### Stress Testing
-
-- [ ] Stress test executed
-  - [ ] 1000 concurrent users
-  - [ ] Identify breaking point
-  - [ ] Graceful degradation verified
-- [ ] Recovery testing
-  - [ ] System recovers from overload
-  - [ ] No data corruption
-  - [ ] Requests can be retried
-
----
-
-## Backup & Disaster Recovery
-
-### Backup Strategy
-
-- [ ] Database backups configured
-  - [ ] Daily automated backups
-  - [ ] Retention: 30 days minimum
-  - [ ] Off-site backup storage
-  - [ ] Encryption enabled
-- [ ] Backup testing
-  - [ ] Restore from backup tested
-  - [ ] Restore time measured
-  - [ ] Data integrity verified
-  - [ ] Regular restore drills scheduled
-- [ ] Code repository backups
-  - [ ] Git repository mirrored
-  - [ ] Deployment artifacts archived
-
-### Disaster Recovery Plan
-
-- [ ] RTO (Recovery Time Objective) defined
-  - [ ] Target: 1 hour or less
-- [ ] RPO (Recovery Point Objective) defined
-  - [ ] Target: 1 hour or less
-- [ ] Failover procedure documented
-  - [ ] Failover steps detailed
-  - [ ] Responsible parties assigned
-  - [ ] Contact information provided
-- [ ] Disaster recovery tested
-  - [ ] Failover drill completed
-  - [ ] Recovery time measured
-  - [ ] Communication plan tested
-
-### Data Retention
-
-- [ ] Data retention policies defined
-  - [ ] Active data retention
-  - [ ] Archive data retention
-  - [ ] Deletion policies for GDPR compliance
-- [ ] Data privacy compliance
-  - [ ] GDPR compliance verified
-  - [ ] LGPD compliance verified (Brazil)
-  - [ ] Right to be forgotten implemented
-
----
-
-## Documentation & Knowledge Transfer
-
-### Technical Documentation
-
-- [ ] Architecture documentation complete
-  - [ ] System design documented
-  - [ ] Component relationships documented
-  - [ ] Data flow documented
-- [ ] API documentation complete
-  - [ ] All endpoints documented
-  - [ ] Request/response examples provided
-  - [ ] Error codes documented
-  - [ ] Published on Swagger/OpenAPI
-- [ ] Database schema documented
-  - [ ] Tables documented
-  - [ ] Relationships documented
-  - [ ] Indexes documented
-  - [ ] Stored procedures documented
-- [ ] Deployment guide complete
-  - [ ] Step-by-step deployment instructions
-  - [ ] Rollback procedures documented
-  - [ ] Emergency procedures documented
-
-### Operations Documentation
-
-- [ ] Runbooks created
-  - [ ] Common issues and solutions
-  - [ ] Escalation procedures
-  - [ ] On-call procedures
-- [ ] Monitoring guide created
-  - [ ] Key metrics explained
-  - [ ] Alert thresholds documented
-  - [ ] Response procedures documented
-- [ ] Security procedures documented
-  - [ ] Key rotation procedures
-  - [ ] Incident response procedures
-  - [ ] Access control procedures
-
-### Knowledge Transfer
-
-- [ ] Operations team training
-  - [ ] System architecture training
-  - [ ] Deployment procedure training
-  - [ ] Monitoring and alerting training
-  - [ ] Troubleshooting training
-- [ ] Support team training
-  - [ ] API usage training
-  - [ ] Common issues and solutions
-  - [ ] Customer support procedures
-- [ ] Documentation accessible
-  - [ ] Shared drive or wiki
-  - [ ] Version controlled
-  - [ ] Regularly updated
-
----
-
-## Deployment Execution
-
-### Pre-Deployment Final Checks
-
-- [ ] All checklist items verified
-- [ ] Team alignment confirmed
-  - [ ] Deployment time scheduled
-  - [ ] Stakeholders notified
-  - [ ] Team members assigned
-  - [ ] Rollback plan reviewed
-- [ ] Monitoring dashboards ready
-  - [ ] All dashboards accessible
-  - [ ] Alert channels configured
-  - [ ] On-call rotations activated
-- [ ] Backup verification
-  - [ ] Latest backup successful
-  - [ ] Restore tested
-  - [ ] Recovery plan ready
-- [ ] Maintenance window announced
-  - [ ] Customers notified
-  - [ ] Support prepared
-  - [ ] Escalation paths ready
-
-### Deployment Steps
-
-1. **Pre-deployment:**
-   ```bash
-   npm run build
-   npm run test
-   npm run test:e2e
-   ```
-
-2. **Database migrations:**
-   ```bash
-   supabase migration up
-   ```
-
-3. **Environment variable verification:**
-   - [ ] All variables set correctly
-   - [ ] Secrets properly stored
-   - [ ] No hardcoded values in code
-
-4. **Application deployment:**
-   ```bash
-   npm run build
-   npm start
-   ```
-
-5. **Smoke tests:**
-   - [ ] Health check endpoints responding
-   - [ ] Login endpoint working
-   - [ ] Basic API calls working
-
-6. **Monitoring verification:**
-   - [ ] All monitoring active
-   - [ ] Logs flowing
-   - [ ] Metrics collected
-
-### Deployment Rollback
-
-If issues detected:
-
-1. **Identify issue:**
-   - [ ] Check logs for errors
-   - [ ] Monitor metrics for anomalies
-   - [ ] Test critical functionality
-
-2. **Initiate rollback:**
-   ```bash
-   # Revert to previous version
-   git checkout <previous-tag>
-   npm run build
-   npm start
-   ```
-
-3. **Verify rollback:**
-   - [ ] Application responsive
-   - [ ] Errors resolved
-   - [ ] Database state consistent
-
-4. **Communication:**
-   - [ ] Notify stakeholders
-   - [ ] Update status page
-   - [ ] Schedule post-mortem
-
----
-
-## Post-Deployment Verification
-
-### Immediate Verification (First Hour)
-
-- [ ] Application is responsive
-  ```bash
-  curl -I https://your-domain.com/health
-  ```
-- [ ] Health check endpoints returning 200
-- [ ] Database connectivity working
-- [ ] Authentication endpoints working
-  - [ ] Login successful
-  - [ ] Token generation successful
-  - [ ] Token refresh working
-- [ ] Admin endpoints accessible
-  - [ ] List users working
-  - [ ] Add user working
-  - [ ] User management working
-- [ ] Webhook endpoints receiving data
-  - [ ] Z-API webhooks processed
-  - [ ] Messages stored in database
-  - [ ] No processing errors
-- [ ] Monitoring active
-  - [ ] Logs flowing
-  - [ ] Metrics collected
-  - [ ] Alerts configured
-
-### Short-Term Verification (First Day)
-
-- [ ] Error rate < 0.1%
-  ```
-  Monitor Sentry dashboard for errors
-  ```
-- [ ] Response times acceptable
-  - [ ] P95 < 500ms
-  - [ ] P99 < 1000ms
-- [ ] Database performance normal
-  - [ ] Query times acceptable
-  - [ ] No slow queries
-  - [ ] Connections stable
-- [ ] No data corruption
-  - [ ] User data accessible
-  - [ ] Message data intact
-  - [ ] Audit logs complete
-- [ ] User feedback positive
-  - [ ] Monitor support channels
-  - [ ] Check email/chat for issues
-  - [ ] Respond to concerns promptly
-
-### Medium-Term Verification (First Week)
-
-- [ ] All features working as expected
-  - [ ] Complete regression testing
-  - [ ] All API endpoints functional
-  - [ ] Webhook processing stable
-- [ ] Performance stable
-  - [ ] No degradation over time
-  - [ ] Resource usage normal
-  - [ ] Cache hit rates good
-- [ ] Security verified
-  - [ ] No unauthorized access
-  - [ ] All authentication working
-  - [ ] HTTPS enforced
-  - [ ] Rate limiting working
-- [ ] Monitoring effective
-  - [ ] All alerts working
-  - [ ] Dashboards useful
-  - [ ] Logs searchable
-
-### Long-Term Verification (Monthly)
-
-- [ ] Backup procedures working
-  - [ ] Regular backups completing
-  - [ ] Backup integrity verified
-  - [ ] Restore procedures tested
-- [ ] Performance baseline established
-  - [ ] Normal performance metrics recorded
-  - [ ] Capacity planning updated
-- [ ] Security audit completed
-  - [ ] Penetration testing (if applicable)
-  - [ ] Code security review
-  - [ ] Dependency vulnerability scan
-
----
-
-## Deployment Summary Template
-
-Use this template to document deployment execution:
-
-```markdown
-# Deployment Summary - [DATE]
-
-## Deployment Details
-- **Deployed Version:** v1.0.0
-- **Deployment Start:** [TIME]
-- **Deployment Complete:** [TIME]
-- **Duration:** [MINUTES]
-- **Status:** [SUCCESS/ROLLBACK]
-
-## Changes Deployed
-- [Feature/Fix 1]
-- [Feature/Fix 2]
-- [Feature/Fix 3]
-
-## Issues Encountered
-- [Issue 1] - [Resolution]
-- [Issue 2] - [Resolution]
-
-## Verification Results
-- All checklist items: [ ] PASSED
-- Error rate: [X]%
-- Response times (P95): [Xms]
-- Database health: [OK/ISSUES]
-
-## Stakeholders Notified
-- [Name] - [Time]
-- [Name] - [Time]
-
-## Post-Deployment Notes
-[Any observations or follow-up items]
-
-## Sign-off
-- Deployment Lead: [Name]
-- Date: [DATE]
+- [ ] Comando executado com sucesso
+
+### Instalar Node.js
+```bash
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
 ```
+- [ ] Node.js v18+ instalado
+- [ ] npm 9+ instalado
+- [ ] Comando `node --version` funciona
+
+### Instalar Git
+```bash
+apt install git -y
+```
+- [ ] Git instalado
+- [ ] Comando `git --version` funciona
+
+### Instalar PM2
+```bash
+npm install -g pm2
+```
+- [ ] PM2 instalado globalmente
+- [ ] Comando `pm2 --version` funciona
+
+### Instalar Nginx
+```bash
+apt install nginx -y
+systemctl start nginx
+```
+- [ ] Nginx instalado
+- [ ] Nginx rodando
 
 ---
 
-## Support & Escalation
+## 3️⃣ PASSO 3: CLONAR E CONFIGURAR APP
 
-### During Deployment
+### Clonar Repositório
+```bash
+cd /var/www
+git clone https://github.com/seu-usuario/iaezap.git
+cd iaezap
+```
+- [ ] Repositório clonado
+- [ ] Pasta `/var/www/iaezap` existe
+- [ ] Arquivo `package.json` visible
 
-- **Critical Issues:** Escalate to lead immediately
-- **Non-Critical Issues:** Document and continue
-- **Questions:** Consult documentation and runbooks first
+### Instalar Dependências
+```bash
+npm install
+```
+- [ ] `npm install` completado
+- [ ] Pasta `node_modules` criada
+- [ ] Sem erros críticos
 
-### Contacts
+### Criar .env.production
+```bash
+nano .env.production
+# Cole as variáveis do .env.production.example
+```
+- [ ] Arquivo `.env.production` criado
+- [ ] Supabase URL preenchida
+- [ ] JWT keys preenchidas
+- [ ] NODE_ENV=production definido
 
-- **On-Call Lead:** [Phone/Slack]
-- **Database Admin:** [Phone/Slack]
-- **DevOps Lead:** [Phone/Slack]
-- **CEO/Stakeholders:** [Phone/Slack]
-
-### Communication Channels
-
-- **Deployment Status:** [Slack Channel]
-- **Incident Updates:** [Status Page]
-- **Customer Support:** [Support Portal]
+### Build da Aplicação
+```bash
+npm run build
+```
+- [ ] Build completa com sucesso
+- [ ] Pasta `.next` criada
+- [ ] Sem erros de compilação
 
 ---
 
-This deployment checklist ensures IAeZap is production-ready. Review and update before each deployment.
+## 4️⃣ PASSO 4: CONFIGURAR PM2
+
+### Iniciar com PM2
+```bash
+pm2 start npm --name "iaezap" -- start
+```
+- [ ] PM2 inicia aplicação
+- [ ] Comando `pm2 status` mostra status "online"
+
+### Configurar Startup
+```bash
+pm2 startup
+pm2 save
+```
+- [ ] Comando `pm2 startup` executado
+- [ ] Comando `pm2 save` executado
+- [ ] App reinicia automaticamente ao reboot
+
+### Verificar Logs
+```bash
+pm2 logs iaezap
+```
+- [ ] Logs mostram app rodando
+- [ ] Listening on port 3000
+- [ ] Sem erros críticos
+
+---
+
+## 5️⃣ PASSO 5: CONFIGURAR NGINX
+
+### Criar Config Nginx
+```bash
+nano /etc/nginx/sites-available/jotaonline.com.br
+```
+- [ ] Arquivo criado com config do guia HOSTINGER_DEPLOYMENT.md
+- [ ] Server names corretos: jotaonline.com.br www.jotaonline.com.br
+- [ ] Proxy pass para localhost:3000
+
+### Ativar Site
+```bash
+ln -s /etc/nginx/sites-available/jotaonline.com.br /etc/nginx/sites-enabled/
+nginx -t
+systemctl restart nginx
+```
+- [ ] Link simbólico criado
+- [ ] `nginx -t` retorna "ok"
+- [ ] Nginx reiniciado com sucesso
+
+---
+
+## 6️⃣ PASSO 6: CERTIFICADO SSL
+
+### Instalar Certbot
+```bash
+apt install certbot python3-certbot-nginx -y
+```
+- [ ] Certbot instalado
+
+### Gerar Certificado
+```bash
+certbot certonly --standalone -d jotaonline.com.br -d www.jotaonline.com.br
+```
+- [ ] Email: seu@email.com preenchido
+- [ ] Termos aceitos
+- [ ] Certificado gerado em `/etc/letsencrypt/live/jotaonline.com.br/`
+
+### Verificar Auto-Renovação
+```bash
+systemctl status certbot.timer
+```
+- [ ] Certbot timer está ativo
+- [ ] Auto-renovação configurada
+
+---
+
+## 7️⃣ PASSO 7: CONFIGURAR DNS
+
+### Na Painel Hostinger
+1. Acesse: https://panel.hostinger.com.br
+2. Domínios → jotaonline.com.br
+3. Gerenciar DNS
+
+### Registros DNS
+- [ ] Registro A (raiz): @ → SEU_IP
+- [ ] Registro A (www): www → SEU_IP
+- [ ] TTL: 3600 ou menor para propagação rápida
+
+### Verificar Propagação
+```bash
+# No seu computador
+nslookup jotaonline.com.br
+# Deve retornar seu IP
+```
+- [ ] DNS propaga para seu IP
+- [ ] Propagação completa (15-30 min)
+
+---
+
+## 8️⃣ PASSO 8: FIREWALL
+
+### Configurar UFW
+```bash
+apt install ufw -y
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw enable
+```
+- [ ] UFW instalado
+- [ ] Portas SSH (22), HTTP (80), HTTPS (443) liberadas
+- [ ] Firewall ativado
+
+---
+
+## 9️⃣ PASSO 9: TESTAR
+
+### No Servidor
+```bash
+# Verifique se app está rodando
+pm2 status
+# Acesse localmente
+curl http://localhost:3000
+```
+- [ ] PM2 mostra "online"
+- [ ] Curl retorna HTML (não erro)
+
+### No Navegador
+```
+https://jotaonline.com.br
+```
+- [ ] Página carrega
+- [ ] Cadeado SSL verde
+- [ ] Sem erros no console (F12)
+- [ ] Redirecionamento HTTP→HTTPS funciona
+
+### Login Test
+```
+https://jotaonline.com.br/login
+```
+- [ ] Página de login carrega
+- [ ] Formulário visível
+- [ ] Credentials funcionam:
+  - Email: kairolopesoficial@gmail.com
+  - Senha: jx&CL%mFvt!x*Sm0
+
+### API Test
+```bash
+curl -X POST https://jotaonline.com.br/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email":"kairolopesoficial@gmail.com",
+    "password":"jx&CL%mFvt!x*Sm0"
+  }'
+```
+- [ ] Retorna `"success": true`
+- [ ] Access token gerado
+- [ ] Sem erros de conexão
+
+---
+
+## 🔟 PASSO 10: MONITORAMENTO
+
+### Verificar Status Regular
+```bash
+# SSH no servidor
+ssh root@jotaonline.com.br
+pm2 status
+pm2 logs iaezap
+```
+- [ ] PM2 sempre online
+- [ ] Sem erros nos logs
+
+### Configurar Auto-Deploy
+```bash
+# Criar script de deploy automático
+nano deploy.sh
+# Copiar conteúdo de deploy.sh
+chmod +x deploy.sh
+```
+- [ ] Script deploy.sh criado
+- [ ] Executável
+
+---
+
+## ✅ PÓS-DEPLOYMENT
+
+### Backups
+- [ ] Backup inicial do banco de dados feito
+- [ ] Backup automático agendado (cron)
+
+### Monitoramento Externo
+- [ ] Uptime Robot configurado (uptimerobot.com)
+- [ ] Alertas de downtime ativados
+- [ ] Email de notificação testado
+
+### Logging
+- [ ] PM2 logs configurados
+- [ ] Rotação de logs habilitada
+- [ ] Sem avisos no espaço em disco
+
+### Documentação
+- [ ] IP do servidor anotado
+- [ ] Senha root guardada em local seguro
+- [ ] Credenciais Supabase confirmadas
+- [ ] JWT keys backup em local seguro
+
+---
+
+## 📊 CHECKLIST RESUMIDO
+
+**Antes de Hostinger:**
+- [ ] Código testado localmente
+- [ ] Repositório Git pusheado
+- [ ] Credenciais preparadas
+
+**Hostinger Setup:**
+- [ ] VPS contratada (2GB RAM)
+- [ ] SSH funcionando
+- [ ] Node.js, npm, git, PM2, Nginx instalados
+
+**Deploy:**
+- [ ] Código clonado
+- [ ] Dependencies instaladas
+- [ ] Build completo
+- [ ] PM2 iniciado
+- [ ] Nginx configurado
+- [ ] SSL certificado
+- [ ] DNS apontando
+
+**Testes:**
+- [ ] HTTPS funcionando
+- [ ] Login funciona
+- [ ] API respondendo
+- [ ] Sem erros críticos
+
+**Pós-Deploy:**
+- [ ] Backups configurados
+- [ ] Monitoramento ativo
+- [ ] Documentação completa
+
+---
+
+## 🆘 TROUBLESHOOTING RÁPIDO
+
+| Problema | Solução |
+|----------|---------|
+| Conexão recusada | `pm2 restart iaezap` |
+| HTTPS não funciona | `certbot renew --force-renewal` |
+| Variáveis não lidas | Verificar `.env.production` existe |
+| Supabase erro | Testar `curl https://gqromcfhiosfppqlottz.supabase.co` |
+| Aplicação lenta | Verificar `pm2 monit` e RAM disponível |
+| DNS não funciona | Aguardar propagação (até 30 min) |
+
+---
+
+## 📈 DEPOIS DE DEPLOY
+
+**Dentro de 1 Semana:**
+- [ ] Testar Z-API webhooks
+- [ ] Testar criar novos usuários
+- [ ] Testar criar novas empresas
+- [ ] Documentar qualquer issue
+
+**Dentro de 1 Mês:**
+- [ ] Performance monitoring
+- [ ] Planejar backup strategy
+- [ ] Planejar scaling (se necessário)
+
+---
+
+## 🎉 STATUS FINAL
+
+Quando todo checklist ✅, você terá:
+
+✅ **jotaonline.com.br em produção**
+✅ **HTTPS seguro com certificado SSL**
+✅ **Auto-deploy scripts prontos**
+✅ **Monitoramento ativo**
+✅ **Backups automáticos**
+✅ **100% operacional**
+
+---
+
+**Tempo Total:** 45-60 minutos
+**Dificuldade:** Intermediária
+**Status:** Pronto para Produção
+
+**Bom deploy!** 🚀

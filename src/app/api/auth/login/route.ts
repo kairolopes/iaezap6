@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('*')
       .eq('email', email)
-      .eq('deleted_at', null)
+      .is('deleted_at', null)
       .single();
 
     // If companyId is provided, filter by it
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         .select('*')
         .eq('email', email)
         .eq('company_id', companyId)
-        .eq('deleted_at', null)
+        .is('deleted_at', null)
         .single();
     }
 

@@ -1,200 +1,201 @@
 import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
-const SUPABASE_URL = 'https://gqromcfhiosfppqlottz.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_uh1cDxnWtzRT4fhYbiEWBg_fbnZkKwQ';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
+// Load environment variables from .env.local
+const envPath = path.join(__dirname, '.env.local');
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+}
+
+// Load environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !serviceRoleKey) {
+  console.error('ERROR: Missing Supabase credentials');
+  console.error('  NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'SET' : 'NOT SET');
+  console.error('  SUPABASE_SERVICE_ROLE_KEY:', serviceRoleKey ? 'SET' : 'NOT SET');
+  process.exit(1);
+}
+
+console.log('Starting SQL migration execution...');
+console.log(`Supabase URL: ${supabaseUrl}`);
+console.log('Service Role Key: SET ✓');
+
+// Create Supabase client with service role key (bypasses RLS)
+const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+});
+
+// Read the migration file
+const migrationPath = path.join(__dirname, 'migrations', '001_complete_migration_bundle.sql');
+console.log(`\nReading migration file: ${migrationPath}`);
+
+if (!fs.existsSync(migrationPath)) {
+  console.error(`ERROR: Migration file not found at ${migrationPath}`);
+  process.exit(1);
+}
+
+const migrationSQL = fs.readFileSync(migrationPath, 'utf-8');
+console.log(`Migration file loaded: ${migrationSQL.length} bytes`);
+
+// Execute the migration
 async function executeMigration() {
   try {
-    console.log('Initializing Supabase client...');
+    console.log('\nExecuting migration...');
 
-    // Create Supabase client with service role key
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
+    // Try to execute the entire migration as a single query
+    try {
+      const { data, error } = await supabase.rpc('exec_sql', {
+        sql_query: migrationSQL
+      });
 
-    // Read the SQL migration file
-    const migrationPath = resolve('./migrations/001_complete_migration_bundle.sql');
-    console.log(`Reading migration file: ${migrationPath}`);
-    const sqlContent = readFileSync(migrationPath, 'utf-8');
-
-    // Remove \echo lines as they're not valid SQL
-    const cleanedSql = sqlContent
-      .split('\n')
-      .filter(line => !line.trim().startsWith('\\echo'))
-      .join('\n');
-
-    console.log(`Migration SQL size: ${sqlContent.length} bytes (cleaned: ${cleanedSql.length} bytes)`);
-
-    // Split into statements, but be careful with strings and comments
-    const statements = [];
-    let currentStatement = '';
-    let inString = false;
-    let stringChar = '';
-    let inDollarQuote = false;
-    let dollarQuoteTag = '';
-
-    for (let i = 0; i < cleanedSql.length; i++) {
-      const char = cleanedSql[i];
-      const nextChar = cleanedSql[i + 1];
-
-      // Handle dollar-quoted strings (e.g., $$, $tag$)
-      if (char === '$' && !inString) {
-        if (!inDollarQuote) {
-          // Starting a dollar quote
-          let tag = '';
-          let j = i + 1;
-          while (j < cleanedSql.length && /[a-zA-Z0-9_]/.test(cleanedSql[j])) {
-            tag += cleanedSql[j];
-            j++;
-          }
-          if (cleanedSql[j] === '$') {
-            inDollarQuote = true;
-            dollarQuoteTag = '$' + tag + '$';
-            i = j;
-          }
-        } else if (cleanedSql.substring(i).startsWith(dollarQuoteTag)) {
-          // Ending a dollar quote
-          inDollarQuote = false;
-          i += dollarQuoteTag.length - 1;
-          dollarQuoteTag = '';
-        }
+      if (error) {
+        throw new Error(`RPC exec_sql failed: ${error.message}`);
       }
 
-      // Handle regular strings
-      if (!inDollarQuote) {
-        if ((char === '\'' || char === '"') && !inString) {
-          inString = true;
-          stringChar = char;
-        } else if (char === stringChar && inString && cleanedSql[i - 1] !== '\\') {
-          inString = false;
-        }
-      }
+      console.log('\n✓ Migration COMPLETED successfully!');
+      console.log('Result:', JSON.stringify(data, null, 2));
 
-      currentStatement += char;
+      // Verify the migration
+      console.log('\n--- VERIFICATION ---');
+      await verifyMigration();
+      return;
+    } catch (rpcError) {
+      // If exec_sql doesn't exist, try using direct query execution
+      console.log(`Note: RPC function attempt failed: ${rpcError.message}`);
+      console.log('Attempting direct SQL execution via pg client...');
 
-      // Statement terminator
-      if (char === ';' && !inString && !inDollarQuote) {
-        statements.push(currentStatement.trim());
-        currentStatement = '';
-      }
-    }
-
-    // Add any remaining statement
-    if (currentStatement.trim()) {
-      statements.push(currentStatement.trim());
-    }
-
-    console.log(`\nParsed ${statements.length} SQL statements\n`);
-
-    // Execute statements
-    let executed = 0;
-    let failed = 0;
-    const errors = [];
-
-    for (let i = 0; i < statements.length; i++) {
-      const stmt = statements[i];
-      if (!stmt) continue;
-
-      try {
-        process.stdout.write(`[${i + 1}/${statements.length}] Executing: ${stmt.substring(0, 60)}...`);
-
-        const { data, error } = await supabase.rpc('exec_sql', {
-          query: stmt
-        });
-
-        if (error) {
-          // Try without RPC
-          const { data: d2, error: e2 } = await supabase.from('information_schema.tables').select('table_name').limit(1);
-          if (e2) {
-            process.stdout.write(' FAILED\n');
-            errors.push(`[${i + 1}] ${e2.message}`);
-            failed++;
-          } else {
-            process.stdout.write(' OK (via direct query)\n');
-            executed++;
-          }
-        } else {
-          process.stdout.write(' OK\n');
-          executed++;
-        }
-      } catch (err) {
-        process.stdout.write(` ERROR: ${err.message}\n`);
-        errors.push(`[${i + 1}] ${err.message}`);
-        failed++;
-      }
-
-      // Add a small delay to avoid rate limiting
-      if ((i + 1) % 5 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-
-    console.log(`\n${'='.repeat(70)}`);
-    console.log('MIGRATION EXECUTION SUMMARY');
-    console.log(`${'='.repeat(70)}`);
-    console.log(`Total statements: ${statements.length}`);
-    console.log(`Successfully executed: ${executed}`);
-    console.log(`Failed: ${failed}`);
-
-    if (errors.length > 0) {
-      console.log(`\nErrors encountered:`);
-      errors.slice(0, 10).forEach(err => console.log(`  - ${err}`));
-      if (errors.length > 10) {
-        console.log(`  ... and ${errors.length - 10} more errors`);
-      }
-    }
-
-    // Run verification queries
-    console.log(`\n${'='.repeat(70)}`);
-    console.log('VERIFICATION QUERIES');
-    console.log(`${'='.repeat(70)}\n`);
-
-    // Check tables
-    const { data: tables, error: tablesErr } = await supabase
-      .from('information_schema.tables')
-      .select('table_name')
-      .in('table_name', ['companies', 'users', 'company_members', 'audit_logs'])
-      .eq('table_schema', 'public');
-
-    if (!tablesErr && tables) {
-      console.log(`Tables created: ${tables.length}/4`);
-      tables.forEach(t => console.log(`  ✓ ${t.table_name}`));
-    } else {
-      console.log(`Could not verify tables: ${tablesErr?.message || 'Unknown error'}`);
-    }
-
-    // Check indexes
-    const { data: indexData } = await supabase.rpc('get_indexes');
-    if (indexData) {
-      console.log(`\nIndexes found: ${indexData.length}`);
-    }
-
-    // Check master user
-    const { data: masterUser } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', 'kairolopesoficial@gmail.com')
-      .single();
-
-    if (masterUser) {
-      console.log(`\nMaster user created:`);
-      console.log(`  Email: ${masterUser.email}`);
-      console.log(`  Role: ${masterUser.role}`);
+      // Use a different approach - execute via a custom function or direct client
+      await executeMigrationViaDirectClient();
     }
 
   } catch (error) {
-    console.error('Migration execution failed:', error);
+    console.error('\nMigration execution failed:');
+    console.error('Error:', error.message);
+    console.error('Full error:', error);
     process.exit(1);
   }
 }
 
+async function executeMigrationViaDirectClient() {
+  try {
+    // Create a PostgreSQL client for direct execution
+    // First, let's try using sql function if it exists
+    console.log('\nTrying direct SQL execution via stored procedures...');
+
+    // Split the migration into chunks to avoid timeouts
+    const chunks = migrationSQL.split('\n\n').filter(chunk => chunk.trim().length > 0);
+    console.log(`Executing ${chunks.length} SQL chunks...`);
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i].trim();
+      if (!chunk.startsWith('--') && chunk.length > 0) {
+        try {
+          // Try to execute each chunk individually
+          console.log(`  [${i + 1}/${chunks.length}] Executing: ${chunk.substring(0, 50)}...`);
+
+          // Note: Direct SQL execution via Supabase client is limited
+          // The best approach is to use the SQL Editor in the dashboard
+          console.log('    ⚠️  Note: Supabase JS client has limited SQL execution. Use SQL Editor in dashboard.');
+          errorCount++;
+        } catch (e) {
+          console.log(`  [${i + 1}/${chunks.length}] ✗ Error: ${e.message}`);
+          errorCount++;
+        }
+      }
+    }
+
+    console.log(`\n⚠️  Direct SQL execution not fully supported via Supabase JS client.`);
+    console.log(`Please use the SQL Editor in the Supabase Dashboard instead.`);
+    console.log(`\nMigration script saved to: migrations/001_complete_migration_bundle.sql`);
+  } catch (error) {
+    console.error('Direct client execution failed:', error.message);
+    throw error;
+  }
+}
+
+async function verifyMigration() {
+  try {
+    // Check if companies table exists
+    const { data: companies, error: companiesError } = await supabase
+      .from('companies')
+      .select('id, name, slug')
+      .limit(5);
+
+    if (companiesError) {
+      console.log('⚠️  Could not query companies table:', companiesError.message);
+    } else {
+      console.log(`✓ Companies table exists (${companies?.length || 0} rows found)`);
+    }
+
+    // Check if users table exists
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, email, role')
+      .limit(5);
+
+    if (usersError) {
+      console.log('⚠️  Could not query users table:', usersError.message);
+    } else {
+      console.log(`✓ Users table exists (${users?.length || 0} rows found)`);
+    }
+
+    // Check if master user was created
+    const { data: masterUser, error: masterError } = await supabase
+      .from('users')
+      .select('id, email, role')
+      .eq('email', 'kairolopesoficial@gmail.com')
+      .single();
+
+    if (masterError && masterError.code !== 'PGRST116') {
+      console.log('⚠️  Could not query master user:', masterError.message);
+    } else if (masterUser) {
+      console.log(`✓ Master user created: ${masterUser.email} (role: ${masterUser.role})`);
+    } else {
+      console.log('⚠️  Master user not found');
+    }
+
+    // Check if company_members table exists
+    const { data: members, error: membersError } = await supabase
+      .from('company_members')
+      .select('id')
+      .limit(1);
+
+    if (membersError && membersError.code !== 'PGRST116') {
+      console.log('⚠️  Could not query company_members table:', membersError.message);
+    } else {
+      console.log(`✓ Company_members table exists`);
+    }
+
+    // Check if audit_logs table exists
+    const { data: logs, error: logsError } = await supabase
+      .from('audit_logs')
+      .select('id')
+      .limit(1);
+
+    if (logsError && logsError.code !== 'PGRST116') {
+      console.log('⚠️  Could not query audit_logs table:', logsError.message);
+    } else {
+      console.log(`✓ Audit_logs table exists`);
+    }
+
+  } catch (error) {
+    console.error('Verification failed:', error.message);
+  }
+}
+
 // Run the migration
-executeMigration().catch(error => {
-  console.error('Fatal error:', error);
-  process.exit(1);
-});
+executeMigration();

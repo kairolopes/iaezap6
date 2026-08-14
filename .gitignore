@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# master password (plaintext - never commit)
+MASTER_PASSWORD.txt

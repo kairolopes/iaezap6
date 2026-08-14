@@ -55,14 +55,11 @@ try {
   console.log(`  role: ${testPayload.role}\n`);
 
   // Generate access token
-  const now = Math.floor(Date.now() / 1000);
   const accessTokenPayload = {
     sub: testPayload.user_id,
     email: testPayload.email,
     roles: [testPayload.role],
     tenantId: testPayload.company_id,
-    iat: now,
-    exp: now + accessTokenExpiry,
     aud: audience,
     iss: issuer,
   };
@@ -142,8 +139,6 @@ try {
     email: testPayload.email,
     type: 'refresh',
     tenantId: testPayload.company_id,
-    iat: now,
-    exp: now + refreshTokenExpiry,
     iss: issuer,
     aud: audience,
   };

@@ -213,9 +213,6 @@ export async function generateTokens(payload: {
     email: payload.email,
     roles: roles as any,
     iat: now,
-    exp: now + AUTH_CONFIG.ACCESS_TOKEN_EXPIRY,
-    aud: AUTH_CONFIG.JWT_AUDIENCE,
-    iss: AUTH_CONFIG.JWT_ISSUER,
   };
 
   // Add tenant ID if provided
@@ -242,9 +239,6 @@ export async function generateTokens(payload: {
       email: payload.email,
       type: 'refresh',
       iat: now,
-      exp: now + AUTH_CONFIG.REFRESH_TOKEN_EXPIRY,
-      iss: AUTH_CONFIG.JWT_ISSUER,
-      aud: AUTH_CONFIG.JWT_AUDIENCE,
     };
 
     if (payload.tenantId) {

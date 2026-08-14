@@ -1,0 +1,28 @@
+
+================================================================================
+COMPLETE DEPLOYMENT SETUP
+================================================================================
+
+[STEP 1] Creating master company...
+
+✗ Error creating company: permission denied for table companies
+
+[STEP 2] Creating master user...
+
+✗ Error creating user: Could not find the table 'public.users' in the schema cache
+
+[STEP 3] Creating Z-API instances...
+
+✗ Error creating Z-API instances: Could not find the 'api_token' column of 'z_api_instances' in the schema cache
+
+[STEP 4] Creating company members...
+
+✗ Error creating company member: Could not find the table 'public.company_members' in the schema cache
+
+[STEP 5] Running verification checks...
+
+Verification Results:
+  ✓ Master company exists: NO
+  ✓ Master user exists: NO
+  ✓ Z-API instances count: 0
+  ✓ Company members exist: NO
