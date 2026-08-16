@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Sidebar from '@/app/components/Sidebar';
 
 export default function UsersPage() {
   const router = useRouter();
@@ -101,7 +102,9 @@ export default function UsersPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar userName={user?.full_name || ''} userRole={user?.role || ''} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#f3f4f6' }}>
       {/* Header */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
