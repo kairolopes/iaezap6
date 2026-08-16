@@ -2,7 +2,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { extractTokenFromRequest } from '@/lib/auth';
+import { extractTenantId, verifyToken } from '@/lib/auth';
+
+function getTokenFromRequest(request: NextRequest): string | null {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  return authHeader.slice(7);
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,10 +21,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await extractTokenFromRequest(request);
+    const token = getTokenFromRequest(request);
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const companyId = token.company_id;
+    const verified = await verifyToken(token);
+    if (!verified) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+
+    const companyId = await extractTenantId(token);
     const contactId = params.id;
 
     // Get contact
@@ -68,10 +77,13 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await extractTokenFromRequest(request);
+    const token = getTokenFromRequest(request);
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const companyId = token.company_id;
+    const verified = await verifyToken(token);
+    if (!verified) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+
+    const companyId = await extractTenantId(token);
     const contactId = params.id;
     const body = await request.json();
     const { name, email, phone, status } = body;
@@ -126,10 +138,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await extractTokenFromRequest(request);
+    const token = getTokenFromRequest(request);
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const companyId = token.company_id;
+    const verified = await verifyToken(token);
+    if (!verified) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+
+    const companyId = await extractTenantId(token);
     const contactId = params.id;
 
     // Soft delete (set deleted_at)
