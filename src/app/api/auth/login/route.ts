@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       .select('*')
       .eq('email', email)
       .is('deleted_at', null)
-      .single();
+      .limit(1);
 
     // If companyId is provided, filter by it
     if (companyId) {
@@ -116,11 +116,12 @@ export async function POST(request: NextRequest) {
         .eq('email', email)
         .eq('company_id', companyId)
         .is('deleted_at', null)
-        .single();
+        .limit(1);
     }
 
-    // Query user from database
-    const { data: user, error: userError } = await query;
+    // Execute query and get first result
+    const { data: userData, error: userError } = await query;
+    const user = Array.isArray(userData) ? userData[0] : userData;
 
     // User not found or database error
     if (userError || !user) {
