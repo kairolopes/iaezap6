@@ -42,3 +42,11 @@ next-env.d.ts
 
 # master password (plaintext - never commit)
 MASTER_PASSWORD.txt
+
+# Ruflo local secrets and runtime data
+.env
+.env.local
+.env.*.local
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Sidebar from '@/app/components/Sidebar';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -21,46 +22,25 @@ export default function DashboardPage() {
     setToken(tokenStr.substring(0, 50) + '...');
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    router.push('/login');
-  };
-
   if (!user) {
     return <div>Carregando...</div>;
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6' }}>
-      {/* Header */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>🚀 IAeZap Dashboard</h1>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <div style={{ fontSize: '14px' }}>
-            <strong>{user.full_name}</strong><br/>
-            <span style={{ color: '#6b7280', fontSize: '12px' }}>{user.email}</span>
-          </div>
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#ef4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            Sair
-          </button>
-        </div>
-      </div>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Sidebar */}
+      <Sidebar userName={user.full_name} userRole={user.role} />
 
       {/* Main Content */}
-      <div style={{ padding: '32px', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#f3f4f6' }}>
+        {/* Header */}
+        <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', padding: '16px 32px' }}>
+          <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>📊 Dashboard</h1>
+          <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Bem-vindo ao IAeZap CRM</p>
+        </div>
+
+        {/* Content Area */}
+        <div style={{ padding: '32px', flex: 1, overflowY: 'auto', maxWidth: '1200px', width: '100%' }}>
         {/* Welcome Card */}
         <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '12px' }}>✨ Bem-vindo ao IAeZap!</h2>
@@ -189,6 +169,7 @@ curl -X POST http://localhost:3000/api/auth/login \\
 curl -X GET http://localhost:3000/api/admin/users \\
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"`}
           </pre>
+        </div>
         </div>
       </div>
     </div>
