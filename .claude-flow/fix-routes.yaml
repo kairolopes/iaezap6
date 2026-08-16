@@ -1,0 +1,31 @@
+# Ruflo Fix Script: Rebuild Next.js Routes
+# Purpose: Fix 404 error for /dashboard/users route
+
+name: "fix-next-routes"
+description: "Rebuild Next.js cache and routes to make /dashboard/users accessible"
+version: "1.0.0"
+
+steps:
+  - name: "verify-file-exists"
+    description: "Verify that src/app/dashboard/users/page.tsx exists"
+    command: "test -f src/app/dashboard/users/page.tsx && echo '✅ File exists' || echo '❌ File missing'"
+
+  - name: "clear-next-cache"
+    description: "Remove .next cache to force full rebuild"
+    command: "rm -rf .next"
+
+  - name: "clean-build"
+    description: "Run clean build of Next.js"
+    command: "npm run build"
+
+  - name: "verify-build"
+    description: "Verify /dashboard/users route was built"
+    command: "grep -r 'dashboard/users' .next/server 2>/dev/null && echo '✅ Route built successfully' || echo '⚠️ Check build output'"
+
+success_criteria:
+  - file_exists: true
+  - build_successful: true
+  - route_accessible: true
+
+rollback:
+  - restore_next_cache: "git checkout .next 2>/dev/null || true"
