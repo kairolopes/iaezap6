@@ -144,7 +144,7 @@ export const companyOperations = {
         .select('*')
         .eq('id', companyId)
         .eq('deleted_at', null)
-        .single();
+        .maybeSingle();
 
       if (error) {
         return {
