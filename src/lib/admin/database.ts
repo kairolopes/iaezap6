@@ -1,5 +1,35 @@
 import { supabase } from '@/lib/auth/supabase';
+import bcrypt from 'bcrypt';
 import { CreateCompanyRequest, AddUserToCompanyRequest, CreateCompanyWithUsersRequest } from '@/types/admin';
+
+/**
+ * Generate a secure random password
+ */
+function generateRandomPassword(length: number = 16): string {
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const special = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+  const all = upper + lower + numbers + special;
+
+  let password = '';
+  // Ensure at least one of each type
+  password += upper[Math.floor(Math.random() * upper.length)];
+  password += lower[Math.floor(Math.random() * lower.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+  password += special[Math.floor(Math.random() * special.length)];
+
+  // Fill the rest randomly
+  for (let i = password.length; i < length; i++) {
+    password += all[Math.floor(Math.random() * all.length)];
+  }
+
+  // Shuffle the password
+  return password
+    .split('')
+    .sort(() => Math.random() - 0.5)
+    .join('');
+}
 
 /**
  * Company database operations
@@ -136,20 +166,45 @@ export const companyOperations = {
         };
       }
 
-      // Create users for the company
-      const usersToCreate = data.users.map(user => ({
-        id: crypto.randomUUID(),
-        company_id: companyId,
-        email: user.email.toLowerCase(),
-        full_name: user.fullName || null,
-        role: user.role,
-        status: 'active' as const,
-        password_hash: '',
+      // Create users for the company with generated passwords
+      const usersWithPasswords: Array<{
+        id: string;
+        company_id: string;
+        email: string;
+        full_name: string | null;
+        role: string;
+        status: string;
+        password_hash: string;
+        plainPassword?: string;
+      }> = [];
+
+      for (const user of data.users) {
+        const plainPassword = generateRandomPassword();
+        const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+        usersWithPasswords.push({
+          id: crypto.randomUUID(),
+          company_id: companyId,
+          email: user.email.toLowerCase(),
+          full_name: user.fullName || null,
+          role: user.role,
+          status: 'active',
+          password_hash: hashedPassword,
+          plainPassword,
+        });
+      }
+
+      // Store plain passwords temporarily for response
+      const plainPasswords = usersWithPasswords.map(u => ({
+        email: u.email,
+        password: u.plainPassword,
       }));
 
+      // Create users (without plain passwords in DB)
+      const usersToInsert = usersWithPasswords.map(({ plainPassword, ...user }) => user);
       const { data: createdUsers, error: usersError } = await supabase
         .from('users')
-        .insert(usersToCreate)
+        .insert(usersToInsert)
         .select();
 
       if (usersError) {
@@ -166,6 +221,7 @@ export const companyOperations = {
         data: {
           company: createdCompany,
           users: createdUsers || [],
+          credentials: plainPasswords, // Include generated passwords in response
         },
       };
     } catch (err) {
