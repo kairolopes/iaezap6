@@ -29,11 +29,15 @@ export const companyOperations = {
         };
       }
 
+      // Generate UUID for company (explicit ID to avoid NULL)
+      const companyId = crypto.randomUUID();
+
       // Create the company
       const { data: company, error } = await supabase
         .from('companies')
         .insert([
           {
+            id: companyId,
             name: data.name,
             slug: data.slug,
             cnpj: data.cnpj,
