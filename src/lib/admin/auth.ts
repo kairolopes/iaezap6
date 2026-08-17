@@ -1,20 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAccessToken } from '@/lib/auth/tokens';
+import { verifyToken } from '@/lib/auth';
 import { extractTokenFromRequestAdvanced } from '@/lib/auth/middleware';
 import { ADMIN_STATUS_CODES } from '@/types/admin';
 
 /**
  * Extract and verify token from request
  * Returns the decoded JWT payload if valid, null otherwise
+ * Uses RS256 verification with proper issuer and audience validation
  */
-export function extractAndVerifyToken(request: NextRequest) {
+export async function extractAndVerifyToken(request: NextRequest) {
   const token = extractTokenFromRequestAdvanced(request);
 
   if (!token) {
     return null;
   }
 
-  return verifyAccessToken(token);
+  const result = await verifyToken(token);
+
+  if (!result.valid || !result.payload) {
+    return null;
+  }
+
+  return result.payload;
 }
 
 /**
@@ -49,7 +56,7 @@ export function withMasterAuth(
 ) {
   return async (request: NextRequest) => {
     // Verify token
-    const payload = extractAndVerifyToken(request);
+    const payload = await extractAndVerifyToken(request);
 
     if (!payload) {
       return NextResponse.json(
