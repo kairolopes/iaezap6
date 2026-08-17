@@ -45,6 +45,15 @@ export const useUsers = () => {
     setState(prev => ({ ...prev, loading: true, error: null, success: false }));
 
     try {
+      // Get company_id from localStorage
+      const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+      const user = userStr ? JSON.parse(userStr) : null;
+      const companyId = user?.company_id;
+
+      if (!companyId) {
+        throw new Error('Company ID not found. Please log in again.');
+      }
+
       const queryParams = new URLSearchParams();
 
       if (options?.role) {
@@ -63,7 +72,7 @@ export const useUsers = () => {
         queryParams.append('offset', options.offset.toString());
       }
 
-      const url = `/api/admin/users${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const url = `/api/admin/companies/${companyId}/users${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
 
       const response = await fetch(url, {
