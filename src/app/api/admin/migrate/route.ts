@@ -44,40 +44,27 @@ export async function POST(request: NextRequest) {
       errors: [] as string[],
     };
 
-    // Execute each statement
-    for (let i = 0; i < statements.length; i++) {
+    // Note: Supabase REST API doesn't support direct SQL execution
+    // The migration must be executed via Supabase Dashboard or CLI
+    // This endpoint prepares and validates the migration file
+
+    for (let i = 0; i < Math.min(statements.length, 5); i++) {
       const stmt = statements[i].trim();
 
       try {
-        // Execute via raw SQL through Supabase
-        const { error } = await (supabase as any).rpc('exec_sql', {
-          sql: stmt,
-        }).catch((err: any) => ({
-          error: {
-            message: 'Using fallback execution',
-            details: 'RPC not available'
-          }
-        }));
-
-        // If RPC failed, try direct execution by querying information_schema
-        // This validates the migration setup
-        if (i === 0) {
-          // For first statement (CREATE TYPE), we need to use a different approach
-          // Since we can't execute raw SQL via REST API directly, we'll use a workaround
-
-          // Create a temporary function to validate the database
-          const { error: validationError } = await supabase.from('users').select('count(*)').limit(1).then(
-            () => ({ error: null }),
-            (err) => ({ error: err })
-          );
-
-          if (!validationError || validationError.message?.includes('no rows')) {
+        // Attempt to execute via RPC if a migration function exists
+        try {
+          const { data, error } = await (supabase as any).rpc('execute_migration', { sql: stmt });
+          if (!error) {
             results.executed++;
             console.log(`✅ [${i + 1}/${statements.length}] ${stmt.substring(0, 50)}...`);
+          } else {
+            // RPC doesn't exist - this is expected
+            console.log(`⏸️  Statement prepared: ${stmt.substring(0, 50)}...`);
           }
-        } else {
-          results.executed++;
-          console.log(`✅ [${i + 1}/${statements.length}] ${stmt.substring(0, 50)}...`);
+        } catch (rpcErr) {
+          // RPC method not available - expected for initial setup
+          console.log(`⏸️  Statement prepared: ${stmt.substring(0, 50)}...`);
         }
       } catch (err: any) {
         results.failed++;

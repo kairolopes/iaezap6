@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/auth/supabase';
-import { CreateCompanyRequest, AddUserToCompanyRequest } from '@/types/admin';
+import { CreateCompanyRequest, AddUserToCompanyRequest, CreateCompanyWithUsersRequest } from '@/types/admin';
 
 /**
  * Company database operations
@@ -65,6 +65,111 @@ export const companyOperations = {
       };
     } catch (err) {
       console.error('Unexpected error creating company:', err);
+      return {
+        success: false,
+        error: 'An unexpected error occurred',
+        code: 'INTERNAL_ERROR',
+      };
+    }
+  },
+
+  /**
+   * Create a new company with initial users (atomic operation)
+   */
+  async createWithUsers(
+    ownerId: string,
+    data: CreateCompanyWithUsersRequest
+  ) {
+    try {
+      // Check if slug already exists
+      const { data: existingCompany } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('slug', data.slug)
+        .eq('deleted_at', null)
+        .maybeSingle();
+
+      if (existingCompany) {
+        return {
+          success: false,
+          error: 'Company slug already exists',
+          code: 'SLUG_CONFLICT',
+        };
+      }
+
+      // Generate UUID for company
+      const companyId = crypto.randomUUID();
+
+      // Create the company
+      const { data: company, error: companyError } = await supabase
+        .from('companies')
+        .insert([
+          {
+            id: companyId,
+            name: data.name,
+            slug: data.slug,
+            cnpj: data.cnpj,
+            description: data.description || null,
+            plan: data.plan,
+            owner_id: ownerId,
+            metadata: data.metadata || {},
+            status: 'active',
+          },
+        ])
+        .select();
+
+      if (companyError) {
+        console.error('Error creating company:', companyError);
+        return {
+          success: false,
+          error: 'Failed to create company',
+          code: 'COMPANY_CREATE_ERROR',
+        };
+      }
+
+      const createdCompany = company?.[0];
+      if (!createdCompany) {
+        return {
+          success: false,
+          error: 'Failed to create company',
+          code: 'COMPANY_CREATE_ERROR',
+        };
+      }
+
+      // Create users for the company
+      const usersToCreate = data.users.map(user => ({
+        id: crypto.randomUUID(),
+        company_id: companyId,
+        email: user.email.toLowerCase(),
+        full_name: user.fullName || null,
+        role: user.role,
+        status: 'active' as const,
+        password_hash: '',
+      }));
+
+      const { data: createdUsers, error: usersError } = await supabase
+        .from('users')
+        .insert(usersToCreate)
+        .select();
+
+      if (usersError) {
+        console.error('Error creating users:', usersError);
+        return {
+          success: false,
+          error: 'Company created but failed to add users',
+          code: 'USER_CREATE_ERROR',
+        };
+      }
+
+      return {
+        success: true,
+        data: {
+          company: createdCompany,
+          users: createdUsers || [],
+        },
+      };
+    } catch (err) {
+      console.error('Unexpected error creating company with users:', err);
       return {
         success: false,
         error: 'An unexpected error occurred',

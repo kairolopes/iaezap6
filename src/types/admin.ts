@@ -63,6 +63,37 @@ export const addUserToCompanySchema = z.object({
 });
 
 /**
+ * Create Company with Users Request Schema
+ * Integrated endpoint to create company and initial users in one request
+ */
+export const createCompanyWithUsersSchema = z.object({
+  name: z
+    .string()
+    .min(2, 'Company name must be at least 2 characters')
+    .max(255, 'Company name must not exceed 255 characters')
+    .trim(),
+  slug: z
+    .string()
+    .min(2, 'Slug must be at least 2 characters')
+    .max(100, 'Slug must not exceed 100 characters')
+    .regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens')
+    .trim(),
+  cnpj: cnpjSchema,
+  description: z
+    .string()
+    .max(1000, 'Description must not exceed 1000 characters')
+    .trim()
+    .optional(),
+  plan: z
+    .enum(['starter', 'professional', 'enterprise'])
+    .default('starter'),
+  users: z
+    .array(addUserToCompanySchema)
+    .min(1, 'At least one user is required'),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+/**
  * Company Response Schema
  */
 export const companyResponseSchema = z.object({
@@ -100,6 +131,7 @@ export const userInCompanyResponseSchema = z.object({
  */
 export type CreateCompanyRequest = z.infer<typeof createCompanySchema>;
 export type AddUserToCompanyRequest = z.infer<typeof addUserToCompanySchema>;
+export type CreateCompanyWithUsersRequest = z.infer<typeof createCompanyWithUsersSchema>;
 export type CompanyResponse = z.infer<typeof companyResponseSchema>;
 export type UserInCompanyResponse = z.infer<typeof userInCompanyResponseSchema>;
 
