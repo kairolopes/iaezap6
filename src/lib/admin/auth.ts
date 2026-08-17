@@ -19,7 +19,7 @@ export function extractAndVerifyToken(request: NextRequest) {
 
 /**
  * Check if user has master/admin role
- * Master role is represented as 'admin' in the JWT token's role claim
+ * Master roles: 'admin', 'master', 'owner' (system owner)
  */
 export function isMasterUser(payload: any): boolean {
   if (!payload) {
@@ -28,13 +28,13 @@ export function isMasterUser(payload: any): boolean {
 
   const role = payload.role || payload.roles;
 
-  // Check if user has admin/master role
+  // Check if user has admin/master/owner role
   if (typeof role === 'string') {
-    return role === 'admin' || role === 'master';
+    return role === 'admin' || role === 'master' || role === 'owner';
   }
 
   if (Array.isArray(role)) {
-    return role.includes('admin') || role.includes('master');
+    return role.includes('admin') || role.includes('master') || role.includes('owner');
   }
 
   return false;
