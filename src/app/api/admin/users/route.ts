@@ -117,14 +117,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if user has admin role
-    if (currentUserData.role !== 'admin') {
+    // Check if user has admin/owner role
+    if (!['owner', 'admin'].includes(currentUserData.role)) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: 'FORBIDDEN',
-            message: 'Only admin users can manage users',
+            message: 'Only admin or owner users can manage users',
             timestamp: new Date().toISOString(),
           },
         },
@@ -352,14 +352,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user has admin role
-    if (currentUserData.role !== 'admin') {
+    // Check if user has admin/owner role
+    if (!['owner', 'admin'].includes(currentUserData.role)) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: 'FORBIDDEN',
-            message: 'Only admin users can add users to company',
+            message: 'Only admin or owner users can add users to company',
             timestamp: new Date().toISOString(),
           },
         },

@@ -36,11 +36,14 @@ export const createCompanySchema = z.object({
   plan: z
     .enum(['starter', 'professional', 'enterprise'])
     .default('starter'),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
  * Add User to Company Request Schema
+ *
+ * Role hierarchy matches the `user_role` Postgres enum defined in
+ * src/lib/auth/001_create_companies_users_roles.sql: owner > admin > member > viewer
  */
 export const addUserToCompanySchema = z.object({
   email: z
@@ -55,8 +58,8 @@ export const addUserToCompanySchema = z.object({
     .trim()
     .optional(),
   role: z
-    .enum(['admin', 'supervisor', 'operador'])
-    .default('operador'),
+    .enum(['owner', 'admin', 'member', 'viewer'])
+    .default('member'),
 });
 
 /**
@@ -71,7 +74,7 @@ export const companyResponseSchema = z.object({
   plan: z.enum(['starter', 'professional', 'enterprise']),
   status: z.enum(['active', 'paused', 'suspended', 'cancelled']),
   ownerId: z.string().uuid(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -84,7 +87,7 @@ export const userInCompanyResponseSchema = z.object({
   email: z.string().email(),
   fullName: z.string().optional(),
   displayName: z.string().optional(),
-  role: z.enum(['admin', 'supervisor', 'operador']),
+  role: z.enum(['owner', 'admin', 'member', 'viewer']),
   status: z.enum(['active', 'inactive', 'invited', 'suspended']),
   emailVerified: z.boolean(),
   lastLoginAt: z.string().datetime().nullable().optional(),
@@ -99,6 +102,16 @@ export type CreateCompanyRequest = z.infer<typeof createCompanySchema>;
 export type AddUserToCompanyRequest = z.infer<typeof addUserToCompanySchema>;
 export type CompanyResponse = z.infer<typeof companyResponseSchema>;
 export type UserInCompanyResponse = z.infer<typeof userInCompanyResponseSchema>;
+
+/**
+ * Standalone literal-union type aliases, derived from the schemas above so
+ * there is a single source of truth for the role/status/plan enums used
+ * throughout hooks and UI components.
+ */
+export type UserRole = UserInCompanyResponse['role'];
+export type UserStatus = UserInCompanyResponse['status'];
+export type CompanyPlan = CompanyResponse['plan'];
+export type CompanyStatus = CompanyResponse['status'];
 
 /**
  * API Response types for admin endpoints

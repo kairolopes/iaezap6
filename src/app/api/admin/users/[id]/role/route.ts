@@ -7,28 +7,35 @@ import { extractTokenFromRequest } from '@/lib/auth/middleware';
 
 /**
  * Validation schema for role change requests
+ *
+ * Role hierarchy matches the `user_role` Postgres enum defined in
+ * src/lib/auth/001_create_companies_users_roles.sql: owner > admin > member > viewer
  */
 const changeRoleSchema = z.object({
-  role: z.enum(['admin', 'supervisor', 'operador']),
+  role: z.enum(['owner', 'admin', 'member', 'viewer']),
 });
 
 type ChangeRoleRequest = z.infer<typeof changeRoleSchema>;
 
 /**
  * Helper function to check if user can modify another user's role
- * Admin can modify supervisor and operador roles
+ * Owner can modify anyone (except self). Admin can modify member/viewer only.
  */
 function canModifyUserRole(actorRole: string, targetRole: string, isSameUser: boolean): boolean {
   if (isSameUser) {
     return false; // Users can't modify their own role
   }
 
-  if (actorRole === 'admin') {
-    // Admins can modify supervisor and operador roles
-    return ['supervisor', 'operador'].includes(targetRole);
+  if (actorRole === 'owner') {
+    return true; // Owners can modify anyone
   }
 
-  return false; // Only admins can modify roles
+  if (actorRole === 'admin') {
+    // Admins can't promote/demote owners or other admins
+    return ['member', 'viewer'].includes(targetRole);
+  }
+
+  return false; // Only admins and owners can modify roles
 }
 
 /**
@@ -200,13 +207,13 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     }
 
     // Check permissions
-    if (currentUserData.role !== 'admin') {
+    if (!['owner', 'admin'].includes(currentUserData.role)) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: 'FORBIDDEN',
-            message: 'Only admin users can change user roles',
+            message: 'Only admin or owner users can change user roles',
             timestamp: new Date().toISOString(),
           },
         },
@@ -257,23 +264,23 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       );
     }
 
-    // Prevent changing admin role (only one admin per company requirement)
-    if (targetUserData.role === 'admin' && newRole !== 'admin') {
-      const { data: otherAdmins, error: adminError } = await supabase
+    // Prevent demoting the last owner of the company
+    if (targetUserData.role === 'owner' && newRole !== 'owner') {
+      const { data: otherOwners, error: ownerError } = await supabase
         .from('users')
         .select('id')
         .eq('company_id', companyId)
-        .eq('role', 'admin')
+        .eq('role', 'owner')
         .neq('id', targetUserId)
         .is('deleted_at', null);
 
-      if (adminError || !otherAdmins || otherAdmins.length === 0) {
+      if (ownerError || !otherOwners || otherOwners.length === 0) {
         return NextResponse.json(
           {
             success: false,
             error: {
               code: 'FORBIDDEN',
-              message: 'Cannot remove admin role from the last admin in the company',
+              message: 'Cannot demote the last owner of the company',
               timestamp: new Date().toISOString(),
             },
           },
