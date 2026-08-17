@@ -56,35 +56,39 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>Email</label>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               style={{
                 width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
+                padding: '10px 12px',
+                border: '2px solid #d1d5db',
                 borderRadius: '4px',
                 fontSize: '14px',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                color: '#111827',
+                fontWeight: '500'
               }}
             />
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '4px' }}>Password</label>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px', color: '#1f2937' }}>Senha</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={{
                 width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
+                padding: '10px 12px',
+                border: '2px solid #d1d5db',
                 borderRadius: '4px',
                 fontSize: '14px',
-                boxSizing: 'border-box'
+                boxSizing: 'border-box',
+                color: '#111827',
+                fontWeight: '500'
               }}
             />
           </div>
@@ -109,10 +113,10 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#f0f9ff', borderRadius: '4px', fontSize: '12px' }}>
-          <strong>Demo Credentials:</strong><br/>
-          Email: kairolopesoficial@gmail.com<br/>
-          Password: jx&amp;CL%mFvt!x*Sm0
+        <div style={{ marginTop: '24px', padding: '16px', backgroundColor: '#dbeafe', borderRadius: '4px', fontSize: '13px', border: '1px solid #0284c7', color: '#0c4a6e' }}>
+          <strong style={{ color: '#075985', fontSize: '14px' }}>👤 Credenciais Master:</strong><br/>
+          <span style={{ color: '#0c4a6e', fontWeight: '500' }}>Email: kairolopesoficial@gmail.com</span><br/>
+          <span style={{ color: '#0c4a6e', fontWeight: '500' }}>Senha: jx&amp;CL%mFvt!x*Sm0</span>
         </div>
       </div>
     </div>
