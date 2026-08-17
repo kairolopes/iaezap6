@@ -19,7 +19,7 @@ export const companyOperations = {
         .select('id')
         .eq('slug', data.slug)
         .eq('deleted_at', null)
-        .single();
+        .maybeSingle();
 
       if (existingCompany) {
         return {
