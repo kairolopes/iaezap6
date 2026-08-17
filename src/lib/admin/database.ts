@@ -223,7 +223,7 @@ export const userOperations = {
         .eq('company_id', companyId)
         .eq('email', data.email.toLowerCase())
         .eq('deleted_at', null)
-        .single();
+        .maybeSingle();
 
       if (existingUser) {
         return {
@@ -233,16 +233,21 @@ export const userOperations = {
         };
       }
 
+      // Generate UUID for user
+      const userId = crypto.randomUUID();
+
       // Create the user
       const { data: user, error } = await supabase
         .from('users')
         .insert([
           {
+            id: userId,
             company_id: companyId,
             email: data.email.toLowerCase(),
             full_name: data.fullName || null,
             role: data.role,
             status: 'active',
+            password_hash: '',
           },
         ])
         .select();
